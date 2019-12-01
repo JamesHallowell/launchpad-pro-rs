@@ -1,6 +1,6 @@
 # launchpad-pro-rs
 
-A fork of [dvhrd's launchpad-pro](https://github.com/dvhdr/launchpad-pro) project to enable writing open source firmware for the Launchpad Pro in Rust.
+A fork of [dvhrd's launchpad-pro](https://github.com/dvhdr/launchpad-pro) project to enable writing open source firmware for the Launchpad Pro in [Rust](https://www.rust-lang.org/).
 
 # Setup
 
@@ -60,10 +60,10 @@ This will create the firmware image, `app.syx`, in the `build` directory. This c
 
 ## Game of Life
 
-A simple implementation of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). To build it for the Launchpad run:
+A simple implementation of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). To build it for the Launchpad Pro run:
 
 ```
 $ cargo sysex --example life
 ```
 
-Pressing buttons on the grid will create new life! You can pause the simulation by pressing the Setup button.
+Pressing buttons on the grid will create new life! You can pause/resume the simulation by pressing the Setup button.
