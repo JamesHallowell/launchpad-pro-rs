@@ -9,11 +9,9 @@ use life::Life;
 #[cfg(target_device = "launchpad")]
 use core::panic::PanicInfo;
 
-/// The Game of Life instance. Constructed lazily using the life() function.
-static mut LIFE: Option<Life> = None;
-
-/// Returns a mutable reference to the Game of Life.
+/// Returns a mutable reference to the Game of Life instance.
 fn life() -> &'static mut Life {
+    static mut LIFE: Option<Life> = None;
     unsafe {
         if let None = LIFE {
             LIFE = Some(Life::new());
