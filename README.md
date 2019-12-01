@@ -1,10 +1,6 @@
 # launchpad-pro-rs
 
-<<<<<<< HEAD
-A fork of [dvhdr's launchpad-pro](https://github.com/dvhdr/launchpad-pro) project to enable writing open source firmware for the Launchpad Pro in Rust.
-=======
-A fork of [dvhrd's launchpad-pro](https://github.com/dvhdr/launchpad-pro) project to enable writing open source firmware for the Launchpad Pro in [Rust](https://www.rust-lang.org/).
->>>>>>> cd3c120972b5496287c159ea6fc5b1409ba66dbb
+A fork of [dvhdr's launchpad-pro](https://github.com/dvhdr/launchpad-pro) project to enable writing open source firmware for the Launchpad Pro in [Rust](https://www.rust-lang.org/).
 
 # Setup
 
