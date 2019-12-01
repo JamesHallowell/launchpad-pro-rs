@@ -11,6 +11,7 @@ addons:
 before_script:
   - rustup target add thumbv7m-none-eabi
   - cargo install cargo-binutils
+  - rustup component add llvm-tools-preview
   - cargo install cargo-make
 script:
   - cargo test --all-targets --verbose
