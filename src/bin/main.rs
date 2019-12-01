@@ -4,6 +4,7 @@
 #[cfg(target_device = "launchpad")]
 use core::panic::PanicInfo;
 
+use launchpad_pro_rs::hal;
 use launchpad_pro_rs::register_event_handler;
 use launchpad_pro_rs::hal::EventHandler;
 
@@ -27,7 +28,7 @@ impl EventHandler for Events {
     fn cable_event(&self) {
     }
 
-    fn surface_event(&self) {
+    fn surface_event(&self, surface_event: hal::SurfaceEvent) {
     }
 
     fn aftertouch_event(&self) {

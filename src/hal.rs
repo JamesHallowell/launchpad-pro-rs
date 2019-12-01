@@ -110,13 +110,30 @@ pub fn plot_led(index: u8, rgb: Rgb) {
     }
 }
 
+pub enum SurfaceEventType {
+    Pad,
+    Setup,
+}
+
+pub enum SurfaceEventValue {
+    Press(u8),
+    Release,
+}
+
+
+pub struct SurfaceEvent {
+    pub surface_event_type: SurfaceEventType,
+    pub point: Point,
+    pub value: SurfaceEventValue,
+}
+
 pub trait EventHandler: Sync {
     fn init_event(&self);
     fn timer_event(&self);
     fn midi_event(&self);
     fn sysex_event(&self);
     fn cable_event(&self);
-    fn surface_event(&self);
+    fn surface_event(&self, surface_event: SurfaceEvent);
     fn aftertouch_event(&self);
 }
 
@@ -128,7 +145,11 @@ macro_rules! register_event_handler {
 
         #[no_mangle]
         pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
-            EVENT_HANDLER.surface_event();
+            EVENT_HANDLER.surface_event($crate::hal::SurfaceEvent {
+                surface_event_type: if event == 1 { $crate::hal::SurfaceEventType::Setup } else { $crate::hal::SurfaceEventType::Pad },
+                point: $crate::hal::Point::from_index(index),
+                value: if value == 0 { $crate::hal::SurfaceEventValue::Release } else { $crate::hal::SurfaceEventValue::Press(value) },
+            });
         }
         #[no_mangle]
         pub extern "C" fn app_midi_event(port: u8, status: u8, value1: u8, value2: u8) {
