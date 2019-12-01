@@ -1,4 +1,5 @@
 language: rust
+os: osx
 before_script:
   - rustup target add thumbv7m-none-eabi
   - cargo install cargo-binutils
