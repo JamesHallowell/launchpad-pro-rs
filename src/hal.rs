@@ -110,6 +110,58 @@ pub fn plot_led(index: u8, rgb: Rgb) {
     }
 }
 
+pub trait EventHandler: Sync {
+    fn init_event(&self);
+    fn timer_event(&self);
+    fn midi_event(&self);
+    fn sysex_event(&self);
+    fn cable_event(&self);
+    fn surface_event(&self);
+    fn aftertouch_event(&self);
+}
+
+#[macro_export]
+macro_rules! register_event_handler {
+    ($handler:expr) => {
+        #[no_mangle]
+        pub static EVENT_HANDLER: &dyn EventHandler = &$handler;
+
+        #[no_mangle]
+        pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
+            EVENT_HANDLER.surface_event();
+        }
+        #[no_mangle]
+        pub extern "C" fn app_midi_event(port: u8, status: u8, value1: u8, value2: u8) {
+            EVENT_HANDLER.midi_event();
+        }
+
+        #[no_mangle]
+        pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
+            EVENT_HANDLER.sysex_event();
+        }
+
+        #[no_mangle]
+        pub extern "C" fn app_aftertouch_event(_index: u8, _value: u8) {
+            EVENT_HANDLER.aftertouch_event();
+        }
+
+        #[no_mangle]
+        extern "C" fn app_cable_event(_event: u8, _value: u8) {
+            EVENT_HANDLER.cable_event();
+        }
+
+        #[no_mangle]
+        pub extern "C" fn app_timer_event() {
+            EVENT_HANDLER.timer_event();
+        }
+
+        #[no_mangle]
+        pub extern "C" fn app_init(_adc_raw: *const u16) {
+            EVENT_HANDLER.init_event();
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

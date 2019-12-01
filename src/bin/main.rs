@@ -4,26 +4,35 @@
 #[cfg(target_device = "launchpad")]
 use core::panic::PanicInfo;
 
-#[no_mangle]
-pub extern "C" fn app_surface_event(_event: u8, _index: u8, _value: u8) {}
+use launchpad_pro_rs::register_event_handler;
+use launchpad_pro_rs::hal::EventHandler;
 
-#[no_mangle]
-pub extern "C" fn app_midi_event(_port: u8, _status: u8, _d1: u8, _d2: u8) {}
+struct Events;
 
-#[no_mangle]
-pub extern "C" fn app_sysex_event(_port: u8, _data: *mut u8, _count: u16) {}
+register_event_handler!(Events);
 
-#[no_mangle]
-pub extern "C" fn app_aftertouch_event(_index: u8, _value: u8) {}
+impl EventHandler for Events {
+    fn init_event(&self) {
+    }
 
-#[no_mangle]
-extern "C" fn app_cable_event(_event: u8, _value: u8) {}
+    fn timer_event(&self) {
+    }
 
-#[no_mangle]
-pub extern "C" fn app_timer_event() {}
+    fn midi_event(&self) {
+    }
 
-#[no_mangle]
-pub extern "C" fn app_init(_adc_raw: *const u16) {}
+    fn sysex_event(&self) {
+    }
+
+    fn cable_event(&self) {
+    }
+
+    fn surface_event(&self) {
+    }
+
+    fn aftertouch_event(&self) {
+    }
+}
 
 #[cfg(target_device = "launchpad")]
 #[panic_handler]
@@ -32,4 +41,5 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[cfg(not(target_device = "launchpad"))]
-fn main() {}
+fn main() {
+}
