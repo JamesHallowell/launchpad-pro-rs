@@ -1,5 +1,12 @@
 language: rust
+
 os: osx
+
+addons:
+  homebrew:
+    packages:
+      - armmbed/formulae/arm-none-eabi-gcc
+
 before_script:
   - rustup target add thumbv7m-none-eabi
   - cargo install cargo-binutils
