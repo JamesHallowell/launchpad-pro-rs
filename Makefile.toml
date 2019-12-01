@@ -40,7 +40,7 @@ dependencies = ["make-build-dir"]
 
 [tasks.build-hex-to-sysex-tool]
 private = true
-description = "Build Dave Hodder's tools for converting .hex to .syx."
+description = "Build dvhdr's tool for converting .hex to .syx."
 command = "${HOST_CPP}"
 args = ["-Ofast", "-std=c++0x", "-I${TOOLS_DIR}/libintelhex/include", "${TOOLS_DIR}/libintelhex/src/intelhex.cc", "${TOOLS_DIR}/hextosyx.cpp", "-o", "${BUILD_DIR}/hextosysex"]
 
