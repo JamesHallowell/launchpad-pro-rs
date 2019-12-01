@@ -1,1 +1,8 @@
 language: rust
+before_script:
+  - rustup target add thumbv7m-none-eabi
+  - cargo install cargo-binutils
+  - cargo install cargo-make
+script:
+  - cargo test --all-targets --verbose
+  - cargo sysex --bin main --verbose
