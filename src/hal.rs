@@ -115,6 +115,7 @@ pub enum SurfaceEventType {
     Setup,
 }
 
+#[derive(PartialEq)]
 pub enum SurfaceEventValue {
     Press(u8),
     Release,
@@ -128,13 +129,13 @@ pub struct SurfaceEvent {
 }
 
 pub trait EventHandler: Sync {
-    fn init_event(&self);
-    fn timer_event(&self);
-    fn midi_event(&self);
-    fn sysex_event(&self);
-    fn cable_event(&self);
-    fn surface_event(&self, surface_event: SurfaceEvent);
-    fn aftertouch_event(&self);
+    fn init_event(&self) {}
+    fn timer_event(&self) {}
+    fn midi_event(&self) {}
+    fn sysex_event(&self) {}
+    fn cable_event(&self) {}
+    fn surface_event(&self, surface_event: SurfaceEvent) {}
+    fn aftertouch_event(&self) {}
 }
 
 #[macro_export]

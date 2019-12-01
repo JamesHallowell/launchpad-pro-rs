@@ -13,26 +13,13 @@ struct Events;
 register_event_handler!(Events);
 
 impl EventHandler for Events {
-    fn init_event(&self) {
-    }
-
-    fn timer_event(&self) {
-    }
-
-    fn midi_event(&self) {
-    }
-
-    fn sysex_event(&self) {
-    }
-
-    fn cable_event(&self) {
-    }
-
-    fn surface_event(&self, surface_event: hal::SurfaceEvent) {
-    }
-
-    fn aftertouch_event(&self) {
-    }
+    fn init_event(&self) {}
+    fn timer_event(&self) {}
+    fn midi_event(&self) {}
+    fn sysex_event(&self) {}
+    fn cable_event(&self) {}
+    fn surface_event(&self, surface_event: hal::SurfaceEvent) {}
+    fn aftertouch_event(&self) {}
 }
 
 #[cfg(target_device = "launchpad")]

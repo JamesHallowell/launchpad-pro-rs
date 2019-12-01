@@ -4,6 +4,9 @@
 mod life;
 
 use launchpad_pro_rs::hal;
+use launchpad_pro_rs::register_event_handler;
+use launchpad_pro_rs::hal::{EventHandler, SurfaceEvent};
+
 use life::Life;
 
 #[cfg(target_device = "launchpad")]
@@ -36,50 +39,45 @@ fn draw_universe() {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
-    if event == 0 && value == 0 {
-        let point = hal::Point::from_index(index);
-        life().set(point, !life().get(point));
-        draw_universe();
-    }
-    if event == 1 && value == 0 {
-        unsafe { IS_RUNNING = !IS_RUNNING };
-    }
-}
+/// Create and register our event handler.
+struct Events;
+register_event_handler!(Events);
 
-#[no_mangle]
-pub extern "C" fn app_midi_event(_port: u8, _status: u8, _d1: u8, _d2: u8) {}
-
-#[no_mangle]
-pub extern "C" fn app_sysex_event(_port: u8, _data: *mut u8, _count: u16) {}
-
-#[no_mangle]
-pub extern "C" fn app_aftertouch_event(_index: u8, _value: u8) {}
-
-#[no_mangle]
-extern "C" fn app_cable_event(_event: u8, _value: u8) {}
-
-#[no_mangle]
-pub extern "C" fn app_timer_event() {
-    static mut TICKS: i32 = 0;
-    const FRAMES_PER_SECOND: i32 = 4;
-    const TICKS_PER_FRAME: i32 = 1000 / FRAMES_PER_SECOND;
-    unsafe {
-        if TICKS == TICKS_PER_FRAME {
-            if IS_RUNNING {
-                life().tick();
-                draw_universe();
+/// Implement handlers for the events we are interested in.
+impl EventHandler for Events {
+    fn timer_event(&self) {
+        static mut TICKS: i32 = 0;
+        const FRAMES_PER_SECOND: i32 = 4;
+        const TICKS_PER_FRAME: i32 = 1000 / FRAMES_PER_SECOND;
+        unsafe {
+            if TICKS == TICKS_PER_FRAME {
+                if IS_RUNNING {
+                    life().tick();
+                    draw_universe();
+                }
+                TICKS = 0;
+            } else {
+                TICKS += 1;
             }
-            TICKS = 0;
-        } else {
-            TICKS += 1;
+        }
+    }
+
+    fn surface_event(&self, surface_event: SurfaceEvent) {
+        if surface_event.value == hal::SurfaceEventValue::Release {
+            match surface_event.surface_event_type {
+                hal::SurfaceEventType::Pad => {
+                    // toggle the cell and redraw the universe
+                    life().set(surface_event.point, !life().get(surface_event.point));
+                    draw_universe();
+                },
+                hal::SurfaceEventType::Setup => {
+                    // pause/unpause the simulation
+                    unsafe { IS_RUNNING = !IS_RUNNING; }
+                }
+            }
         }
     }
 }
-
-#[no_mangle]
-pub extern "C" fn app_init(_adc_raw: *const u16) {}
 
 #[cfg(target_device = "launchpad")]
 #[panic_handler]
