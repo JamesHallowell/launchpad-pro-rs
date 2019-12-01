@@ -1,10 +1,11 @@
 #![cfg_attr(target_device = "launchpad", no_std)]
 #![cfg_attr(target_device = "launchpad", no_main)]
 
+#[cfg(target_device = "launchpad")]
 use core::panic::PanicInfo;
 
 #[no_mangle]
-pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {}
+pub extern "C" fn app_surface_event(_event: u8, _index: u8, _value: u8) {}
 
 #[no_mangle]
 pub extern "C" fn app_midi_event(_port: u8, _status: u8, _d1: u8, _d2: u8) {}

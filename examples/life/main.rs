@@ -6,6 +6,7 @@ mod life;
 use launchpad_pro_rs::hal;
 use life::Life;
 
+#[cfg(target_device = "launchpad")]
 use core::panic::PanicInfo;
 
 /// The Game of Life instance. Constructed lazily using the life() function.

@@ -1,6 +1,4 @@
-use core::iter::Map;
 use core::ops::Add;
-use core::ops::Range;
 
 #[cfg(target_device = "launchpad")]
 extern "C" {

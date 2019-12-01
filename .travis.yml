@@ -13,6 +13,7 @@ before_script:
   - cargo install cargo-binutils
   - rustup component add llvm-tools-preview
   - cargo install cargo-make
+
 script:
   - cargo test --all-targets --verbose
   - cargo sysex --bin main --verbose
