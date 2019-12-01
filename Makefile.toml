@@ -1,0 +1,63 @@
+[env]
+LAUNCHPAD_TARGET = "thumbv7m-none-eabi"
+HOST_CPP = "g++"
+BUILD_DIR = "build"
+TOOLS_DIR = "tools"
+OUTPUT = "app"
+
+[tasks.build]
+command = "cargo"
+args = ["build", "--target", "${LAUNCHPAD_TARGET}"]
+
+[tasks.build-release]
+command = "cargo"
+args = ["build", "--target", "${LAUNCHPAD_TARGET}", "--release"]
+
+#
+#   SysEx Flow
+#
+
+[tasks.clean-build-dir]
+private = true
+description = "Remove the build directory."
+command = "rm"
+args = ["-rf", "${BUILD_DIR}"]
+
+[tasks.make-build-dir]
+private = true
+description = "Make the build directory."
+command = "mkdir"
+args = ["-p", "${BUILD_DIR}"]
+dependencies = ["clean-build-dir"]
+
+[tasks.convert-to-hex]
+private = true
+install_crate = "cargo-binutils"
+description = "Convert the binary into hex."
+command = "cargo"
+args = ["objcopy", "${@}", "--target", "${LAUNCHPAD_TARGET}", "--release", "--", "-O", "ihex", "${BUILD_DIR}/${OUTPUT}.hex"]
+dependencies = ["make-build-dir"]
+
+[tasks.build-hex-to-sysex-tool]
+private = true
+description = "Build Dave Hodder's tools for converting .hex to .syx."
+command = "${HOST_CPP}"
+args = ["-Ofast", "-std=c++0x", "-I${TOOLS_DIR}/libintelhex/include", "${TOOLS_DIR}/libintelhex/src/intelhex.cc", "${TOOLS_DIR}/hextosyx.cpp", "-o", "${BUILD_DIR}/hextosysex"]
+
+[tasks.convert-to-sysex]
+private = true
+description = "Convert a .hex to a .syx using the hextosysex tool."
+command = "build/hextosysex"
+args = ["${BUILD_DIR}/${OUTPUT}.hex", "${BUILD_DIR}/${OUTPUT}.syx"]
+dependencies = ["convert-to-hex", "build-hex-to-sysex-tool"]
+
+[tasks.sysex]
+description = "Convert to SysEx ready for uploading to Launchpad Pro."
+dependencies = [
+    "clean-build-dir",
+    "make-build-dir",
+    "convert-to-hex",
+    "build-hex-to-sysex-tool",
+    "convert-to-sysex"
+]
+

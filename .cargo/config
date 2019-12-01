@@ -1,0 +1,21 @@
+[target.thumbv7m-none-eabi]
+rustflags = [
+  "--cfg", 'target_device="launchpad"',
+  "-C", "linker=arm-none-eabi-gcc",
+  "-C", "link-arg=-Tstm32_flash.ld",
+  "-C", "link-arg=-u _start",
+  "-C", "link-arg=-u _Minimum_Stack_Size",
+  "-C", "link-arg=-mcpu=cortex-m3",
+  "-C", "link-arg=-mthumb",
+  "-C", "link-arg=-specs=nano.specs",
+  "-C", "link-arg=-specs=nosys.specs",
+  "-C", "link-arg=-nostdlib",
+  "-C", "link-arg=-Wl,-static",
+  "-C", "link-arg=-N",
+  "-C", "link-arg=-nostartfiles",
+  "-C", "link-arg=-Wl,--gc-sections",
+  "-C", "link-arg=lib/launchpad_pro.a",
+]
+
+[alias]
+sysex = "make -- sysex"
