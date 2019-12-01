@@ -1,5 +1,7 @@
 # launchpad-pro-rs
 
+A fork of [dvhrd's launchpad-pro](https://github.com/dvhdr/launchpad-pro) project to enable writing open source firmware for the Launchpad Pro in Rust.
+
 # Setup
 
 ## macOS
