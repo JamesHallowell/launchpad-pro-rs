@@ -30,7 +30,7 @@ $ brew install armmbed/formulae/arm-none-eabi-gcc
 
 ## Local
 
-By default Cargo will build your project for the host machine. This means we can use an `std` environment for running tests.
+By default Cargo will build your project for the host machine. This means we can use an `std` environment for running our tests.
 
 We can build our project by running:
 
@@ -44,8 +44,6 @@ And as expected we can test our project by running:
 $ cargo test
 ```
 
-When we are ready to run our project on the Launchpad Pro itself, we will need to run another command to cross compile for that target.
-
 ## Launchpad Pro
 
 You will need to build your project as a SysEx file in order to upload it to the Launchpad Pro. To do this run:
@@ -55,3 +53,13 @@ $ cargo sysex --bin main
 ```
 
 This will create the firmware image, `app.syx`, in the `build` directory. This can then be uploaded to the Launchpad Pro. Consult the [guide from the original repository](https://github.com/dvhdr/launchpad-pro#uploading-to-a-launchpad-pro) on how to do this.
+
+# Examples
+
+## Game of Life
+
+A simple [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life) implementation. To build it for the Launchpad run:
+
+```
+$ cargo sysex --example life
+```
