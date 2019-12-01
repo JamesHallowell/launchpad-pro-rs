@@ -6,6 +6,7 @@ addons:
   homebrew:
     packages:
       - armmbed/formulae/arm-none-eabi-gcc
+    update: true
 
 before_script:
   - rustup target add thumbv7m-none-eabi
