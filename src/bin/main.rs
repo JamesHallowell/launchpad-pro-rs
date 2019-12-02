@@ -5,20 +5,21 @@
 use core::panic::PanicInfo;
 
 use launchpad_pro_rs::hal;
-use launchpad_pro_rs::register_event_handler;
-use launchpad_pro_rs::hal::EventHandler;
+use launchpad_pro_rs::hal::EventListener;
+use launchpad_pro_rs::register_event_listener;
 
-struct Events;
+/// The Launchpad Pro app.
+struct App;
+register_event_listener!(App);
 
-register_event_handler!(Events);
-
-impl EventHandler for Events {
+/// Implementation of the EventListener trait to handle events from the Launchpad Pro.
+impl EventListener for App {
     fn init_event(&self) {}
     fn timer_event(&self) {}
     fn midi_event(&self) {}
     fn sysex_event(&self) {}
     fn cable_event(&self) {}
-    fn surface_event(&self, surface_event: hal::SurfaceEvent) {}
+    fn surface_event(&self, _surface_event: hal::SurfaceEvent) {}
     fn aftertouch_event(&self) {}
 }
 
@@ -29,5 +30,4 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[cfg(not(target_device = "launchpad"))]
-fn main() {
-}
+fn main() {}

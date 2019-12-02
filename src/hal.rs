@@ -121,14 +121,13 @@ pub enum SurfaceEventValue {
     Release,
 }
 
-
 pub struct SurfaceEvent {
     pub surface_event_type: SurfaceEventType,
     pub point: Point,
     pub value: SurfaceEventValue,
 }
 
-pub trait EventHandler: Sync {
+pub trait EventListener: Sync {
     fn init_event(&self) {}
     fn timer_event(&self) {}
     fn midi_event(&self) {}
@@ -139,47 +138,55 @@ pub trait EventHandler: Sync {
 }
 
 #[macro_export]
-macro_rules! register_event_handler {
+macro_rules! register_event_listener {
     ($handler:expr) => {
         #[no_mangle]
-        pub static EVENT_HANDLER: &dyn EventHandler = &$handler;
+        pub static EVENT_LISTENER: &dyn EventListener = &$handler;
 
         #[no_mangle]
         pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
-            EVENT_HANDLER.surface_event($crate::hal::SurfaceEvent {
-                surface_event_type: if event == 1 { $crate::hal::SurfaceEventType::Setup } else { $crate::hal::SurfaceEventType::Pad },
+            EVENT_LISTENER.surface_event($crate::hal::SurfaceEvent {
+                surface_event_type: if event == 1 {
+                    $crate::hal::SurfaceEventType::Setup
+                } else {
+                    $crate::hal::SurfaceEventType::Pad
+                },
                 point: $crate::hal::Point::from_index(index),
-                value: if value == 0 { $crate::hal::SurfaceEventValue::Release } else { $crate::hal::SurfaceEventValue::Press(value) },
+                value: if value == 0 {
+                    $crate::hal::SurfaceEventValue::Release
+                } else {
+                    $crate::hal::SurfaceEventValue::Press(value)
+                },
             });
         }
         #[no_mangle]
         pub extern "C" fn app_midi_event(port: u8, status: u8, value1: u8, value2: u8) {
-            EVENT_HANDLER.midi_event();
+            EVENT_LISTENER.midi_event();
         }
 
         #[no_mangle]
         pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
-            EVENT_HANDLER.sysex_event();
+            EVENT_LISTENER.sysex_event();
         }
 
         #[no_mangle]
         pub extern "C" fn app_aftertouch_event(_index: u8, _value: u8) {
-            EVENT_HANDLER.aftertouch_event();
+            EVENT_LISTENER.aftertouch_event();
         }
 
         #[no_mangle]
         extern "C" fn app_cable_event(_event: u8, _value: u8) {
-            EVENT_HANDLER.cable_event();
+            EVENT_LISTENER.cable_event();
         }
 
         #[no_mangle]
         pub extern "C" fn app_timer_event() {
-            EVENT_HANDLER.timer_event();
+            EVENT_LISTENER.timer_event();
         }
 
         #[no_mangle]
         pub extern "C" fn app_init(_adc_raw: *const u16) {
-            EVENT_HANDLER.init_event();
+            EVENT_LISTENER.init_event();
         }
     };
 }
