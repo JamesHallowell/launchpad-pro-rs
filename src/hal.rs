@@ -121,7 +121,6 @@ pub enum SurfaceEventValue {
     Release,
 }
 
-
 pub struct SurfaceEvent {
     pub surface_event_type: SurfaceEventType,
     pub point: Point,
@@ -147,9 +146,17 @@ macro_rules! register_event_listener {
         #[no_mangle]
         pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
             EVENT_LISTENER.surface_event($crate::hal::SurfaceEvent {
-                surface_event_type: if event == 1 { $crate::hal::SurfaceEventType::Setup } else { $crate::hal::SurfaceEventType::Pad },
+                surface_event_type: if event == 1 {
+                    $crate::hal::SurfaceEventType::Setup
+                } else {
+                    $crate::hal::SurfaceEventType::Pad
+                },
                 point: $crate::hal::Point::from_index(index),
-                value: if value == 0 { $crate::hal::SurfaceEventValue::Release } else { $crate::hal::SurfaceEventValue::Press(value) },
+                value: if value == 0 {
+                    $crate::hal::SurfaceEventValue::Release
+                } else {
+                    $crate::hal::SurfaceEventValue::Press(value)
+                },
             });
         }
         #[no_mangle]

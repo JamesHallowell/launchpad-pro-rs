@@ -1,16 +1,17 @@
 #![cfg_attr(target_device = "launchpad", no_std)]
 #![cfg_attr(target_device = "launchpad", no_main)]
 
+#[cfg(target_device = "launchpad")]
+use core::panic::PanicInfo;
+
 mod life;
 
 use launchpad_pro_rs::hal;
-use launchpad_pro_rs::register_event_listener;
 use launchpad_pro_rs::hal::{EventListener, SurfaceEvent};
+use launchpad_pro_rs::register_event_listener;
 
 use life::Life;
 
-#[cfg(target_device = "launchpad")]
-use core::panic::PanicInfo;
 use spin::Mutex;
 
 /// The number of frames per second in our simulation.
@@ -44,7 +45,7 @@ impl App {
                 point.to_index(),
                 match life.get(point) {
                     life::Cell::Alive => hal::Rgb::new(0, 255, 0),
-                    _ => hal::Rgb::new(0, 0, 0),
+                    life::Cell::Dead => hal::Rgb::new(0, 0, 0),
                 },
             );
         }
@@ -88,7 +89,7 @@ impl EventListener for App {
                 hal::SurfaceEventType::Pad => {
                     self.toggle_cell(surface_event.point);
                     self.draw_universe();
-                },
+                }
                 hal::SurfaceEventType::Setup => {
                     self.toggle_is_running();
                 }
@@ -99,8 +100,6 @@ impl EventListener for App {
 
 /// Create a static instance of our app.
 static APP: App = App::new();
-
-/// Register the static instance of our app to receive events from the hardware.
 register_event_listener!(APP);
 
 #[cfg(target_device = "launchpad")]
@@ -129,7 +128,7 @@ mod tests {
         app.surface_event(SurfaceEvent {
             surface_event_type: SurfaceEventType::Pad,
             point: hal::Point::new(5, 5),
-            value: SurfaceEventValue::Release
+            value: SurfaceEventValue::Release,
         });
 
         // expect that the cell we created is now alive
@@ -153,7 +152,7 @@ mod tests {
         app.surface_event(SurfaceEvent {
             surface_event_type: SurfaceEventType::Setup,
             point: hal::Point::new(0, 9),
-            value: SurfaceEventValue::Release
+            value: SurfaceEventValue::Release,
         });
 
         // check that our button press was registered
@@ -165,9 +164,6 @@ mod tests {
         }
 
         // now that the simulation as started we expect that our solitary cell has died
-        assert_eq!(
-            app.life.lock().get(hal::Point::new(5, 5)),
-            life::Cell::Dead
-        );
+        assert_eq!(app.life.lock().get(hal::Point::new(5, 5)), life::Cell::Dead);
     }
 }
