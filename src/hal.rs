@@ -136,7 +136,7 @@ pub trait EventListener: Sync {
     fn init_event(&self) {}
     fn timer_event(&self) {}
     fn midi_event(&self, port: midi::Port, midi_event: midi::Message) {}
-    fn sysex_event(&self) {}
+    fn sysex_event(&self, port: midi::Port, data: &[u8]) {}
     fn cable_event(&self, cable_event: midi::CableEvent) {}
     fn surface_event(&self, surface_event: SurfaceEvent) {}
     fn aftertouch_event(&self, aftertouch_event: AftertouchEvent) {}
@@ -207,7 +207,17 @@ macro_rules! register_event_listener {
 
         #[no_mangle]
         pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
-            EVENT_LISTENER.sysex_event();
+            let port = match port {
+                0 => Some($crate::hal::midi::Port::Standalone),
+                1 => Some($crate::hal::midi::Port::USB),
+                2 => Some($crate::hal::midi::Port::DIN),
+                _ => None,
+            };
+
+            if let Some(port) = port {
+                let data = unsafe { core::slice::from_raw_parts(data, count as usize) };
+                EVENT_LISTENER.sysex_event(port, data);
+            }
         }
 
         #[no_mangle]

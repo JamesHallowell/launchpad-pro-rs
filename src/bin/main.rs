@@ -17,7 +17,7 @@ impl EventListener for App {
     fn init_event(&self) {}
     fn timer_event(&self) {}
     fn midi_event(&self, _port: hal::midi::Port, _message: hal::midi::Message) {}
-    fn sysex_event(&self) {}
+    fn sysex_event(&self, _port: hal::midi::Port, _data: &[u8]) {}
     fn cable_event(&self, _cable_event: hal::midi::CableEvent) {}
     fn surface_event(&self, _surface_event: hal::SurfaceEvent) {}
     fn aftertouch_event(&self, _aftertouch_event: hal::AftertouchEvent) {}
