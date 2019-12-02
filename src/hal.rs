@@ -127,14 +127,42 @@ pub struct SurfaceEvent {
     pub value: SurfaceEventValue,
 }
 
+pub struct AftertouchEvent {
+    pub point: Point,
+    pub value: u8,
+}
+
 pub trait EventListener: Sync {
     fn init_event(&self) {}
     fn timer_event(&self) {}
-    fn midi_event(&self) {}
+    fn midi_event(&self, port: midi::Port, midi_event: midi::Message) {}
     fn sysex_event(&self) {}
-    fn cable_event(&self) {}
+    fn cable_event(&self, cable_event: midi::CableEvent) {}
     fn surface_event(&self, surface_event: SurfaceEvent) {}
-    fn aftertouch_event(&self) {}
+    fn aftertouch_event(&self, aftertouch_event: AftertouchEvent) {}
+}
+
+pub mod midi {
+    pub enum Port {
+        Standalone,
+        USB,
+        DIN,
+    }
+
+    pub struct Message {
+        pub status: u8,
+        pub data: (u8, u8),
+    }
+
+    pub enum Cable {
+        MidiIn,
+        MidiOut,
+    }
+
+    pub enum CableEvent {
+        Connect(Cable),
+        Disconnect(Cable),
+    }
 }
 
 #[macro_export]
@@ -159,9 +187,22 @@ macro_rules! register_event_listener {
                 },
             });
         }
+
         #[no_mangle]
-        pub extern "C" fn app_midi_event(port: u8, status: u8, value1: u8, value2: u8) {
-            EVENT_LISTENER.midi_event();
+        pub extern "C" fn app_midi_event(port: u8, status: u8, data1: u8, data2: u8) {
+            let port = match port {
+                0 => Some($crate::hal::midi::Port::Standalone),
+                1 => Some($crate::hal::midi::Port::USB),
+                2 => Some($crate::hal::midi::Port::DIN),
+                _ => None,
+            };
+
+            if let Some(port) = port {
+                EVENT_LISTENER.midi_event(port, $crate::hal::midi::Message {
+                    status,
+                    data: (data1, data2),
+                });
+            }
         }
 
         #[no_mangle]
@@ -170,13 +211,27 @@ macro_rules! register_event_listener {
         }
 
         #[no_mangle]
-        pub extern "C" fn app_aftertouch_event(_index: u8, _value: u8) {
-            EVENT_LISTENER.aftertouch_event();
+        pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
+            EVENT_LISTENER.aftertouch_event($crate::hal::AftertouchEvent {
+                point: $crate::hal::Point::from_index(index),
+                value,
+            });
         }
 
         #[no_mangle]
-        extern "C" fn app_cable_event(_event: u8, _value: u8) {
-            EVENT_LISTENER.cable_event();
+        extern "C" fn app_cable_event(cable_type: u8, value: u8) {
+            let cable_type = match cable_type {
+                0 => Some($crate::hal::midi::Cable::MidiIn),
+                1 => Some($crate::hal::midi::Cable::MidiOut),
+                _ => None,
+            };
+
+            if let Some(cable_type) = cable_type {
+                EVENT_LISTENER.cable_event(match value {
+                    0 => $crate::hal::midi::CableEvent::Disconnect(cable_type),
+                    _ => $crate::hal::midi::CableEvent::Connect(cable_type),
+                });
+            }
         }
 
         #[no_mangle]
