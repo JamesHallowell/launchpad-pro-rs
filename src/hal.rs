@@ -135,11 +135,11 @@ pub struct AftertouchEvent {
 pub trait EventListener: Sync {
     fn init_event(&self) {}
     fn timer_event(&self) {}
-    fn midi_event(&self, port: midi::Port, midi_event: midi::Message) {}
-    fn sysex_event(&self, port: midi::Port, data: &[u8]) {}
-    fn cable_event(&self, cable_event: midi::CableEvent) {}
-    fn surface_event(&self, surface_event: SurfaceEvent) {}
-    fn aftertouch_event(&self, aftertouch_event: AftertouchEvent) {}
+    fn midi_event(&self, _port: midi::Port, _midi_event: midi::Message) {}
+    fn sysex_event(&self, _port: midi::Port, _data: &[u8]) {}
+    fn cable_event(&self, _cable_event: midi::CableEvent) {}
+    fn surface_event(&self, _surface_event: SurfaceEvent) {}
+    fn aftertouch_event(&self, _aftertouch_event: AftertouchEvent) {}
 }
 
 pub mod midi {
