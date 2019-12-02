@@ -5,14 +5,14 @@
 use core::panic::PanicInfo;
 
 use launchpad_pro_rs::hal;
-use launchpad_pro_rs::register_event_handler;
-use launchpad_pro_rs::hal::EventHandler;
+use launchpad_pro_rs::register_event_listener;
+use launchpad_pro_rs::hal::EventListener;
 
-struct Events;
+struct App;
 
-register_event_handler!(Events);
+register_event_listener!(App);
 
-impl EventHandler for Events {
+impl EventListener for App {
     fn init_event(&self) {}
     fn timer_event(&self) {}
     fn midi_event(&self) {}

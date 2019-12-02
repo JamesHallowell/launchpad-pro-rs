@@ -28,7 +28,7 @@ pub struct Life {
 
 impl Life {
     /// Construct a new Game of Life.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Life {
             universe: [[Cell::Dead; Grid::size() as usize]; 2],
             active: 0,
