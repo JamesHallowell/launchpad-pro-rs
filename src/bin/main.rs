@@ -14,7 +14,7 @@ register_event_listener!(App);
 
 /// Implementation of the EventListener trait to handle events from the Launchpad Pro.
 impl EventListener for App {
-    fn init_event(&self) {}
+    fn init_event(&self, _adc: hal::ADC) {}
     fn timer_event(&self) {}
     fn midi_event(&self, _port: hal::midi::Port, _message: hal::midi::Message) {}
     fn sysex_event(&self, _port: hal::midi::Port, _data: &[u8]) {}

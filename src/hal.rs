@@ -133,13 +133,57 @@ pub struct AftertouchEvent {
 }
 
 pub trait EventListener: Sync {
-    fn init_event(&self) {}
+    fn init_event(&self, adc: ADC) {}
     fn timer_event(&self) {}
     fn midi_event(&self, _port: midi::Port, _midi_event: midi::Message) {}
     fn sysex_event(&self, _port: midi::Port, _data: &[u8]) {}
     fn cable_event(&self, _cable_event: midi::CableEvent) {}
     fn surface_event(&self, _surface_event: SurfaceEvent) {}
     fn aftertouch_event(&self, _aftertouch_event: AftertouchEvent) {}
+}
+
+/// A wrapper around the raw ADC pointer to allow reading values from the pads.
+pub struct ADC {
+    adc: *const u16
+}
+
+impl ADC {
+    /// The number of pads on the Launchpad Pro.
+    const PAD_COUNT: usize = 64;
+
+    /// Create a new ADC instance.
+    pub fn new(adc: *const u16) -> Self {
+        Self { adc }
+    }
+
+    /// Read a 12-bit value from a pad at a given point on the grid. If there isn't a pad at the
+    /// point provided then this function will return None.
+    pub fn read(&self, pos: Point) -> Option<u16> {
+        if let Some(offset) = Self::point_to_offset(pos) {
+            Some(unsafe { *self.adc.offset(offset as isize) })
+        } else {
+            None
+        }
+    }
+
+    /// For technical reasons the offsets from the ADC pointer use a slightly odd scheme.
+    /// This function converts points in the grid to offsets into this ADC pointer corresponding
+    /// to that point. If there isn't a pad at the point provided then this function will return
+    /// None.
+    fn point_to_offset(pos: Point) -> Option<usize> {
+        if pos.y >= 1 && pos.y <= 4 && pos.x >= 1 && pos.x <= 8 {
+            let y_offset = (pos.y - 1) * 16;
+            let x_offset = (pos.x - 1) * 2;
+            Some((x_offset + y_offset) as usize)
+        }
+        else if pos.y >= 5 && pos.y <= 8 && pos.x >= 1 && pos.x <= 8 {
+            let y_offset = (pos.y - 5) * 16;
+            let x_offset = (pos.x - 1) * 2;
+            Some((x_offset + y_offset + 1) as usize)
+        } else {
+            None
+        }
+    }
 }
 
 pub mod midi {
@@ -250,8 +294,8 @@ macro_rules! register_event_listener {
         }
 
         #[no_mangle]
-        pub extern "C" fn app_init(_adc_raw: *const u16) {
-            EVENT_LISTENER.init_event();
+        pub extern "C" fn app_init(adc: *const u16) {
+            EVENT_LISTENER.init_event($crate::hal::ADC::new(adc));
         }
     };
 }
@@ -309,5 +353,50 @@ mod tests {
         assert_eq!(points.next().unwrap(), Point::new(0, 1));
         assert_eq!(points.next().unwrap(), Point::new(1, 1));
         // ... and so on
+    }
+
+    #[test]
+    fn adc_offset_calculation() {
+        assert_eq!(ADC::point_to_offset(Point::new(0, 0)), None);
+        assert_eq!(ADC::point_to_offset(Point::new(1, 1)), Some(0));
+        assert_eq!(ADC::point_to_offset(Point::new(2, 2)), Some(18));
+        assert_eq!(ADC::point_to_offset(Point::new(3, 3)), Some(36));
+        assert_eq!(ADC::point_to_offset(Point::new(4, 4)), Some(54));
+        assert_eq!(ADC::point_to_offset(Point::new(5, 5)), Some(9));
+        assert_eq!(ADC::point_to_offset(Point::new(6, 6)), Some(27));
+        assert_eq!(ADC::point_to_offset(Point::new(7, 7)), Some(45));
+        assert_eq!(ADC::point_to_offset(Point::new(8, 8)), Some(63));
+        assert_eq!(ADC::point_to_offset(Point::new(9, 9)), None);
+        assert_eq!(ADC::point_to_offset(Point::new(8, 1)), Some(14));
+        assert_eq!(ADC::point_to_offset(Point::new(4, 3)), Some(38));
+        assert_eq!(ADC::point_to_offset(Point::new(3, 6)), Some(21));
+        assert_eq!(ADC::point_to_offset(Point::new(1, 8)), Some(49));
+        assert_eq!(ADC::point_to_offset(Point::new(4, 4)), Some(54));
+        assert_eq!(ADC::point_to_offset(Point::new(5, 5)), Some(9));
+        assert_eq!(ADC::point_to_offset(Point::new(11, 11)), Some(0));
+        assert_eq!(ADC::point_to_offset(Point::new(7, 5)), Some(13));
+        assert_eq!(ADC::point_to_offset(Point::new(8, 8)), Some(63));
+        assert_eq!(ADC::point_to_offset(Point::new(10, 10)), None);
+        assert_eq!(ADC::point_to_offset(Point::from_index(11)), Some(0));
+        assert_eq!(ADC::point_to_offset(Point::from_index(51)), Some(1));
+        assert_eq!(ADC::point_to_offset(Point::from_index(12)), Some(2));
+        assert_eq!(ADC::point_to_offset(Point::from_index(52)), Some(3));
+        assert_eq!(ADC::point_to_offset(Point::from_index(0)), None);
+    }
+
+    #[test]
+    fn read_adc_value() {
+        let mut values = [0 as u16; ADC::PAD_COUNT];
+        let wrapper = ADC {
+            adc: values.as_ptr()
+        };
+
+        assert_eq!(wrapper.read(Point::new(0, 0)), None);
+
+        values[16] = 7;
+        assert_eq!(wrapper.read(Point::new(1, 2)), Some(7));
+
+        values[16] = 34;
+        assert_eq!(wrapper.read(Point::new(1, 2)), Some(34));
     }
 }
