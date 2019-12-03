@@ -3,6 +3,8 @@ use core::ops::Add;
 #[cfg(target_device = "launchpad")]
 extern "C" {
     fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8);
+    fn hal_send_midi(port: u8, status: u8, data1: u8, data2: u8);
+    fn hal_send_sysex(port: u8, data: *const u8, length: u16);
 }
 
 /// The Launchpad Pro grid.
@@ -187,25 +189,57 @@ impl ADC {
 }
 
 pub mod midi {
+    /// The MIDI ports available on the Launchpad Pro.
     pub enum Port {
-        Standalone,
-        USB,
-        DIN,
+        Standalone = 0,
+        USB = 1,
+        DIN = 2,
     }
 
+    /// A MIDI message.
     pub struct Message {
         pub status: u8,
         pub data: (u8, u8),
     }
 
+    impl Message {
+        /// Construct a new MIDI message.
+        pub fn new(status: u8, data: (u8, u8)) -> Self {
+            Self {status, data}
+        }
+    }
+
+    /// The MIDI DIN socket types available.
     pub enum Cable {
         MidiIn,
         MidiOut,
     }
 
+    /// The events that can occur for the MIDI DIN sockets.
     pub enum CableEvent {
         Connect(Cable),
         Disconnect(Cable),
+    }
+
+    /// Send a MIDI message to one of the ports available on the device.
+    pub fn send_message(port: Port, message: Message) {
+        #[cfg(target_device = "launchpad")]
+        unsafe {
+            super::hal_send_midi(port as u8, message.status, message.data.0, message.data.1);
+        }
+    }
+
+    /// Send a SysEx message to one of the ports on the device.
+    /// The caller is responsible for ensuring that the message is correctly formatted:
+    ///     - Starts with 0xF0 and ends with 0xF7.
+    /// The message must not exceed 320 bytes. Messages longer than 320 bytes will be discarded.
+    pub fn send_sysex(port: Port, data: &[u8]) {
+        #[cfg(target_device = "launchpad")]
+        unsafe {
+            if data.len() <= 320 {
+                super::hal_send_sysex(port as u8, data.as_ptr(), data.len() as u16);
+            }
+        }
     }
 }
 
@@ -387,9 +421,7 @@ mod tests {
     #[test]
     fn read_adc_value() {
         let mut values = [0 as u16; ADC::PAD_COUNT];
-        let wrapper = ADC {
-            adc: values.as_ptr()
-        };
+        let wrapper = ADC::new(values.as_ptr());
 
         assert_eq!(wrapper.read(Point::new(0, 0)), None);
 
