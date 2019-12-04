@@ -16,4 +16,5 @@ before_script:
 
 script:
   - cargo test --all-targets --verbose
+  - cargo test --doc --verbose
   - cargo sysex --bin main --verbose
