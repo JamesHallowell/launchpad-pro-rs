@@ -3,6 +3,7 @@ use core::ops::Add;
 #[cfg(target_device = "launchpad")]
 extern "C" {
     fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8);
+    fn hal_read_led(t: u8, index: u8, red: *mut u8, green: *mut u8, blue: *mut u8);
     fn hal_send_midi(port: u8, status: u8, data1: u8, data2: u8);
     fn hal_send_sysex(port: u8, data: *const u8, length: u16);
 }
@@ -166,6 +167,32 @@ pub mod surface {
                 super::hal_plot_led(0, point.to_index(), rgb.0, rgb.1, rgb.2);
             }
         }
+    }
+
+    /// Read the color of an LED on the grid.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchpad_pro_rs::hal::surface::read_led;
+    /// use launchpad_pro_rs::hal::Point;
+    ///
+    /// let color = read_led(Point::new(0, 0));
+    /// ```
+    pub fn read_led(point: Point) -> Option<Rgb> {
+        #[cfg(target_device = "launchpad")]
+        unsafe {
+            if point.to_index() < Grid::size() {
+                let mut red = 0;
+                let mut green = 0;
+                let mut blue = 0;
+
+                super::hal_read_led(0, point.to_index(), &mut red, &mut green, &mut blue);
+
+                return Some(Rgb(red, green, blue));
+            }
+        }
+        None
     }
 
     /// The types of button on the surface of the Launchpad Pro.
@@ -551,10 +578,10 @@ mod tests {
     }
 
     #[test]
-    fn colors() {
-        let red = Rgb::new(255, 0, 0);
-        assert_eq!(red.0, 63);
-        assert_eq!(red.1, 0);
-        assert_eq!(red.2, 0);
+    fn colors_get_converted_to_18_bit() {
+        let color = Rgb::new(255, 127, 63);
+        assert_eq!(color.0, 63);
+        assert_eq!(color.1, 31);
+        assert_eq!(color.2, 15);
     }
 }
