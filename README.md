@@ -56,15 +56,15 @@ $ cargo sysex --bin main
 
 This will create the firmware image, `app.syx`, in the `build` directory. This can then be uploaded to the Launchpad Pro. Consult the [guide from the original repository](https://github.com/dvhdr/launchpad-pro#uploading-to-a-launchpad-pro) on how to do this.
 
-# Gettings Started
+# Getting Started
 
 ## Examples
 
-A basic example application can be found in the `examples` directory to help you get started.
+A simple example application can be found in the `examples` directory to help you get started.
 
 ### Game of Life
 
-A simple implementation of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). To build it for the Launchpad Pro run:
+An implementation of [Conway's Game of Life](https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life). To build it for the Launchpad Pro run:
 
 ```
 $ cargo sysex --example life
