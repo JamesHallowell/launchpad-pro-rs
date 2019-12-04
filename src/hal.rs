@@ -146,7 +146,6 @@ impl Point {
 /// Respond to events on the Launchpad Pro surface and control the LEDs.
 pub mod surface {
     use crate::hal::Point;
-    use crate::hal::Grid;
     use crate::hal::Rgb;
 
     /// Set the colour of an LED on the grid.
@@ -160,11 +159,11 @@ pub mod surface {
     ///
     /// set_led(Point::new(5, 5), Rgb::new(255, 127, 0));
     /// ```
-    pub fn set_led(point: Point, rgb: Rgb) {
-        #[cfg(target_device = "launchpad")]
-        unsafe {
-            if point.to_index() < Grid::size() {
-                super::hal_plot_led(0, point.to_index(), rgb.0, rgb.1, rgb.2);
+    pub fn set_led(point: Point, _rgb: Rgb) {
+        if point.to_index() < super::Grid::size() {
+            #[cfg(target_device = "launchpad")]
+            unsafe {
+                super::hal_plot_led(0, point.to_index(), _rgb.0, _rgb.1, _rgb.2);
             }
         }
     }
@@ -180,15 +179,13 @@ pub mod surface {
     /// let color = read_led(Point::new(0, 0));
     /// ```
     pub fn read_led(point: Point) -> Option<Rgb> {
-        #[cfg(target_device = "launchpad")]
-        unsafe {
-            if point.to_index() < Grid::size() {
+        if point.to_index() < super::Grid::size() {
+            #[cfg(target_device = "launchpad")]
+            unsafe {
                 let mut red = 0;
                 let mut green = 0;
                 let mut blue = 0;
-
                 super::hal_read_led(0, point.to_index(), &mut red, &mut green, &mut blue);
-
                 return Some(Rgb(red, green, blue));
             }
         }
@@ -234,9 +231,6 @@ pub mod surface {
     unsafe impl Send for Pads {}
 
     impl Pads {
-        /// The number of pads on the Launchpad Pro.
-        const PAD_COUNT: usize = 64;
-
         /// Construct a new Pads instance from a raw ADC pointer.
         pub fn new(adc: *const u16) -> Self {
             Self { adc }
@@ -303,7 +297,7 @@ pub mod surface {
 
     #[test]
     fn read_adc_value() {
-        let mut values = [0 as u16; Pads::PAD_COUNT];
+        let mut values = [0 as u16; 64];
         let pads = Pads::new(values.as_ptr());
 
         assert_eq!(pads.read(Point::new(0, 0)), None);
@@ -359,10 +353,10 @@ pub mod midi {
     ///
     /// send_message(Port::DIN, Message::new(0x90, (60, 127)));
     /// ```
-    pub fn send_message(port: Port, message: Message) {
+    pub fn send_message(_port: Port, _message: Message) {
         #[cfg(target_device = "launchpad")]
         unsafe {
-            super::hal_send_midi(port as u8, message.status, message.data.0, message.data.1);
+            super::hal_send_midi(_port as u8, _message.status, _message.data.0, _message.data.1);
         }
     }
 
@@ -379,11 +373,11 @@ pub mod midi {
     /// let sysex_message = [0xF0, 0xDE, 0xAD, 0xBE, 0xEF, 0xF7];
     /// send_sysex(Port::USB, &sysex_message);
     /// ```
-    pub fn send_sysex(port: Port, data: &[u8]) {
-        #[cfg(target_device = "launchpad")]
-        unsafe {
-            if data.len() <= 320 {
-                crate::hal::hal_send_sysex(port as u8, data.as_ptr(), data.len() as u16);
+    pub fn send_sysex(_port: Port, data: &[u8]) {
+        if data.len() <= 320 {
+            #[cfg(target_device = "launchpad")]
+            unsafe {
+                crate::hal::hal_send_sysex(_port as u8, data.as_ptr(), data.len() as u16);
             }
         }
     }
@@ -392,7 +386,7 @@ pub mod midi {
 /// The EventListener trait can be implemented to receive events from the Launchpad Pro hardware.
 pub trait EventListener: Sync {
     /// Called on startup.
-    fn init_event(&self, pads: surface::Pads) {}
+    fn init_event(&self, _pads: surface::Pads) {}
     /// A 1 kHz (1 millisecond) timer.
     fn timer_event(&self) {}
     /// Called when a MIDI message is received from USB or DIN.
