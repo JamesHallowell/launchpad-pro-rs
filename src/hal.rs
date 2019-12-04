@@ -27,32 +27,48 @@ impl Grid {
     }
 
     /// Returns an iterator over all the points in the grid.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchpad_pro_rs::hal::{Grid, Rgb};
+    /// use launchpad_pro_rs::hal::surface::set_led;
+    ///
+    /// // set every led on the grid to blue
+    /// for point in Grid::points() {
+    ///     set_led(point, Rgb::new(0, 0, 255));
+    /// }
+    ///
+    /// ```
     pub fn points() -> impl Iterator<Item = Point> {
         (0..Grid::size()).map(Point::from_index)
     }
 }
 
-/// An RGB color.
+/// An 18-bit RGB color.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Rgb(u8, u8, u8);
 
-impl Rgb {
-    const MAX_LED: u8 = 63;
-}
-
-fn clamp_led(led: u8) -> u8 {
-    if led > Rgb::MAX_LED {
-        Rgb::MAX_LED
-    } else {
-        led
-    }
+/// Map an 8-bit value to a 6-bit range.
+fn convert_to_6_bit(led: u8) -> u8 {
+    ((63 * (led as u16)) / (255)) as u8
 }
 
 impl Rgb {
-    /// Construct a new RGB color. The color channels have a valid range of [0, 64). Any values
-    /// outside this range will be clamped.
+    /// Construct a new 18-bit RGB color. The arguments can be in the range `[0, 255]` but will be
+    /// mapped and stored as 6-bits internally.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchpad_pro_rs::hal::Rgb;
+    ///
+    /// let red = Rgb::new(255, 0, 0);
+    /// let green = Rgb::new(0, 255, 0);
+    /// let blue = Rgb::new(0, 0, 255);
+    /// ```
     pub fn new(red: u8, green: u8, blue: u8) -> Self {
-        Rgb(clamp_led(red), clamp_led(green), clamp_led(blue))
+        Rgb(convert_to_6_bit(red), convert_to_6_bit(green), convert_to_6_bit(blue))
     }
 }
 
@@ -90,104 +106,187 @@ impl Point {
         self.y
     }
 
-    /// Construct a point from an index in the range [0, 100). Any index outside this range will be
-    /// wrapped.
+    /// Construct a point from an index in the range `[0, 100)`. Any index outside this range will
+    /// be wrapped.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchpad_pro_rs::hal::Point;
+    ///
+    /// let point = Point::from_index(55);
+    /// assert_eq!(point, Point::new(5, 5));
+    ///
+    /// let point = Point::from_index(100);
+    /// assert_eq!(point, Point::new(0, 0));
+    /// ```
     pub fn from_index(index: u8) -> Self {
         Point::new((index % 10) as i8, (index / 10) as i8)
     }
 
-    /// Returns an index in the range [0, 100) corresponding to this point.
+    /// Returns an index in the range `[0, 100)` corresponding to this point.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchpad_pro_rs::hal::Point;
+    ///
+    /// let point = Point::new(5, 5);
+    /// assert_eq!(point.to_index(), 55);
+    ///
+    /// let point = Point::new(10, 10);
+    /// assert_eq!(point.to_index(), 0);
+    /// ```
     pub fn to_index(&self) -> u8 {
         ((self.y * Grid::height() as i8) + self.x) as u8
     }
 }
 
-/// Set the colour of an LED on the grid.
-pub fn plot_led(index: u8, rgb: Rgb) {
-    #[cfg(target_device = "launchpad")]
-    unsafe {
-        if index < Grid::size() {
-            hal_plot_led(0, index, rgb.0, rgb.1, rgb.2);
-        }
-    }
-}
+/// Respond to events on the Launchpad Pro surface and control the LEDs.
+pub mod surface {
+    use crate::hal::Point;
+    use crate::hal::Grid;
+    use crate::hal::Rgb;
 
-pub enum SurfaceEventType {
-    Pad,
-    Setup,
-}
-
-#[derive(PartialEq)]
-pub enum SurfaceEventValue {
-    Press(u8),
-    Release,
-}
-
-pub struct SurfaceEvent {
-    pub surface_event_type: SurfaceEventType,
-    pub point: Point,
-    pub value: SurfaceEventValue,
-}
-
-pub struct AftertouchEvent {
-    pub point: Point,
-    pub value: u8,
-}
-
-pub trait EventListener: Sync {
-    fn init_event(&self, adc: ADC) {}
-    fn timer_event(&self) {}
-    fn midi_event(&self, _port: midi::Port, _midi_event: midi::Message) {}
-    fn sysex_event(&self, _port: midi::Port, _data: &[u8]) {}
-    fn cable_event(&self, _cable_event: midi::CableEvent) {}
-    fn surface_event(&self, _surface_event: SurfaceEvent) {}
-    fn aftertouch_event(&self, _aftertouch_event: AftertouchEvent) {}
-}
-
-/// A wrapper around the raw ADC pointer to allow reading values from the pads.
-pub struct ADC {
-    adc: *const u16
-}
-
-impl ADC {
-    /// The number of pads on the Launchpad Pro.
-    const PAD_COUNT: usize = 64;
-
-    /// Create a new ADC instance.
-    pub fn new(adc: *const u16) -> Self {
-        Self { adc }
-    }
-
-    /// Read a 12-bit value from a pad at a given point on the grid. If there isn't a pad at the
-    /// point provided then this function will return None.
-    pub fn read(&self, pos: Point) -> Option<u16> {
-        if let Some(offset) = Self::point_to_offset(pos) {
-            Some(unsafe { *self.adc.offset(offset as isize) })
-        } else {
-            None
+    /// Set the colour of an LED on the grid.
+    ///
+    /// # Example
+    ///
+    /// ```
+    ///
+    /// use launchpad_pro_rs::hal::surface::set_led;
+    /// use launchpad_pro_rs::hal::{Point, Rgb};
+    ///
+    /// set_led(Point::new(5, 5), Rgb::new(255, 127, 0));
+    /// ```
+    pub fn set_led(point: Point, rgb: Rgb) {
+        #[cfg(target_device = "launchpad")]
+        unsafe {
+            if point.to_index() < Grid::size() {
+                super::hal_plot_led(0, point.to_index(), rgb.0, rgb.1, rgb.2);
+            }
         }
     }
 
-    /// For technical reasons the offsets from the ADC pointer use a slightly odd scheme.
-    /// This function converts points in the grid to offsets into this ADC pointer corresponding
-    /// to that point. If there isn't a pad at the point provided then this function will return
-    /// None.
-    fn point_to_offset(pos: Point) -> Option<usize> {
-        if pos.y >= 1 && pos.y <= 4 && pos.x >= 1 && pos.x <= 8 {
-            let y_offset = (pos.y - 1) * 16;
-            let x_offset = (pos.x - 1) * 2;
-            Some((x_offset + y_offset) as usize)
+    /// The types of button on the surface of the Launchpad Pro.
+    pub enum Button {
+        /// A pad button.
+        Pad(Point),
+        /// The setup button.
+        Setup,
+    }
+
+    /// The types of event that can occur on a button.
+    pub enum Event {
+        /// A button has been pressed. Contains the value of the button press.
+        Press(u8),
+        /// A button has been released.
+        Release,
+    }
+
+    /// Button events occur when a button is pressed or released on the Launchpad Pro.
+    pub struct ButtonEvent {
+        /// The button that was pressed or released.
+        pub button: Button,
+        /// Whether the button was pressed or released.
+        pub event: Event,
+    }
+
+    /// Aftertouch events occur when an aftertouch (pad pressure) event is reported.
+    pub struct AftertouchEvent {
+        pub point: Point,
+        pub value: u8,
+    }
+
+    /// A wrapper around the raw ADC pointer to allow reading values from the pads.
+    pub struct Pads {
+        adc: *const u16
+    }
+
+    impl Pads {
+        /// The number of pads on the Launchpad Pro.
+        const PAD_COUNT: usize = 64;
+
+        /// Construct a new Pads instance from a raw ADC pointer.
+        pub fn new(adc: *const u16) -> Self {
+            Self { adc }
         }
-        else if pos.y >= 5 && pos.y <= 8 && pos.x >= 1 && pos.x <= 8 {
-            let y_offset = (pos.y - 5) * 16;
-            let x_offset = (pos.x - 1) * 2;
-            Some((x_offset + y_offset + 1) as usize)
-        } else {
-            None
+
+        /// Read a 12-bit value from a pad at a given point on the grid. If there isn't a pad at the
+        /// point provided then this function will return None.
+        pub fn read(&self, pos: Point) -> Option<u16> {
+            if let Some(offset) = Self::point_to_offset(pos) {
+                Some(unsafe { *self.adc.offset(offset as isize) })
+            } else {
+                None
+            }
         }
+
+        /// For technical reasons the offsets from the ADC pointer use a slightly odd scheme.
+        /// This function converts points in the grid to offsets into this ADC pointer corresponding
+        /// to that point. If there isn't a pad at the point provided then this function will return
+        /// None.
+        fn point_to_offset(pos: Point) -> Option<usize> {
+            if pos.y >= 1 && pos.y <= 4 && pos.x >= 1 && pos.x <= 8 {
+                let y_offset = (pos.y - 1) * 16;
+                let x_offset = (pos.x - 1) * 2;
+                Some((x_offset + y_offset) as usize)
+            }
+            else if pos.y >= 5 && pos.y <= 8 && pos.x >= 1 && pos.x <= 8 {
+                let y_offset = (pos.y - 5) * 16;
+                let x_offset = (pos.x - 1) * 2;
+                Some((x_offset + y_offset + 1) as usize)
+            } else {
+                None
+            }
+        }
+    }
+
+    #[test]
+    fn adc_offset_calculation() {
+        assert_eq!(Pads::point_to_offset(Point::new(0, 0)), None);
+        assert_eq!(Pads::point_to_offset(Point::new(1, 1)), Some(0));
+        assert_eq!(Pads::point_to_offset(Point::new(2, 2)), Some(18));
+        assert_eq!(Pads::point_to_offset(Point::new(3, 3)), Some(36));
+        assert_eq!(Pads::point_to_offset(Point::new(4, 4)), Some(54));
+        assert_eq!(Pads::point_to_offset(Point::new(5, 5)), Some(9));
+        assert_eq!(Pads::point_to_offset(Point::new(6, 6)), Some(27));
+        assert_eq!(Pads::point_to_offset(Point::new(7, 7)), Some(45));
+        assert_eq!(Pads::point_to_offset(Point::new(8, 8)), Some(63));
+        assert_eq!(Pads::point_to_offset(Point::new(9, 9)), None);
+        assert_eq!(Pads::point_to_offset(Point::new(8, 1)), Some(14));
+        assert_eq!(Pads::point_to_offset(Point::new(4, 3)), Some(38));
+        assert_eq!(Pads::point_to_offset(Point::new(3, 6)), Some(21));
+        assert_eq!(Pads::point_to_offset(Point::new(1, 8)), Some(49));
+        assert_eq!(Pads::point_to_offset(Point::new(4, 4)), Some(54));
+        assert_eq!(Pads::point_to_offset(Point::new(5, 5)), Some(9));
+        assert_eq!(Pads::point_to_offset(Point::new(11, 11)), Some(0));
+        assert_eq!(Pads::point_to_offset(Point::new(7, 5)), Some(13));
+        assert_eq!(Pads::point_to_offset(Point::new(8, 8)), Some(63));
+        assert_eq!(Pads::point_to_offset(Point::new(10, 10)), None);
+        assert_eq!(Pads::point_to_offset(Point::from_index(11)), Some(0));
+        assert_eq!(Pads::point_to_offset(Point::from_index(51)), Some(1));
+        assert_eq!(Pads::point_to_offset(Point::from_index(12)), Some(2));
+        assert_eq!(Pads::point_to_offset(Point::from_index(52)), Some(3));
+        assert_eq!(Pads::point_to_offset(Point::from_index(0)), None);
+    }
+
+    #[test]
+    fn read_adc_value() {
+        let mut values = [0 as u16; Pads::PAD_COUNT];
+        let pads = Pads::new(values.as_ptr());
+
+        assert_eq!(pads.read(Point::new(0, 0)), None);
+
+        values[16] = 7;
+        assert_eq!(pads.read(Point::new(1, 2)), Some(7));
+
+        values[16] = 34;
+        assert_eq!(pads.read(Point::new(1, 2)), Some(34));
     }
 }
 
+/// Send and receive MIDI messages.
 pub mod midi {
     /// The MIDI ports available on the Launchpad Pro.
     pub enum Port {
@@ -222,6 +321,14 @@ pub mod midi {
     }
 
     /// Send a MIDI message to one of the ports available on the device.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchpad_pro_rs::hal::midi::{send_message, Port, Message};
+    ///
+    /// send_message(Port::DIN, Message::new(0x90, (60, 127)));
+    /// ```
     pub fn send_message(port: Port, message: Message) {
         #[cfg(target_device = "launchpad")]
         unsafe {
@@ -233,16 +340,68 @@ pub mod midi {
     /// The caller is responsible for ensuring that the message is correctly formatted:
     ///     - Starts with 0xF0 and ends with 0xF7.
     /// The message must not exceed 320 bytes. Messages longer than 320 bytes will be discarded.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use launchpad_pro_rs::hal::midi::{send_sysex, Port};
+    ///
+    /// let sysex_message = [0xF0, 0xDE, 0xAD, 0xBE, 0xEF, 0xF7];
+    /// send_sysex(Port::USB, &sysex_message);
+    /// ```
     pub fn send_sysex(port: Port, data: &[u8]) {
         #[cfg(target_device = "launchpad")]
         unsafe {
             if data.len() <= 320 {
-                super::hal_send_sysex(port as u8, data.as_ptr(), data.len() as u16);
+                crate::hal::hal_send_sysex(port as u8, data.as_ptr(), data.len() as u16);
             }
         }
     }
 }
 
+/// The EventListener trait can be implemented to receive events from the Launchpad Pro hardware.
+pub trait EventListener: Sync {
+    /// Called on startup.
+    fn init_event(&self, pads: surface::Pads) {}
+    /// A 1 kHz (1 millisecond) timer.
+    fn timer_event(&self) {}
+    /// Called when a MIDI message is received from USB or DIN.
+    fn midi_event(&self, _port: midi::Port, _midi_event: midi::Message) {}
+    /// Called when a SysEx message is received from USB or DIN.
+    fn sysex_event(&self, _port: midi::Port, _data: &[u8]) {}
+    /// Called when a MIDI DIN cable is connected or disconnected.
+    fn cable_event(&self, _cable_event: midi::CableEvent) {}
+    /// Called when the user presses or releases a button or pad on the surface.
+    fn button_event(&self, _button_event: surface::ButtonEvent) {}
+    /// Called when an aftertouch (pad pressure) event is reported by the low level firmware.
+    fn aftertouch_event(&self, _aftertouch_event: surface::AftertouchEvent) {}
+}
+
+/// Register an instance of some type that implements the `EventListener` trait to receive event
+/// notifications from the Launchpad Pro hardware.
+///
+/// This macro should only be called once.
+///
+/// # Example
+///
+/// ```
+/// use launchpad_pro_rs::hal::{EventListener, Point, Rgb};
+/// use launchpad_pro_rs::hal::surface::{Pads, set_led};
+/// use launchpad_pro_rs::register_event_listener;
+///
+/// struct App; // define our app type
+///
+/// static APP: App = App; // create a static instance of our app
+///
+/// impl EventListener for App { // implement the EventListener trait for our app
+///     fn init_event(&self, _: Pads) {
+///         // when the Launchpad is initialised we will set a white LED at the center of the grid
+///         set_led(Point::new(5, 5), Rgb::new(255, 255, 255));
+///     }
+/// }
+///
+/// register_event_listener!(APP); // register it as the global event listener
+/// ```
 #[macro_export]
 macro_rules! register_event_listener {
     ($handler:expr) => {
@@ -251,17 +410,16 @@ macro_rules! register_event_listener {
 
         #[no_mangle]
         pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
-            EVENT_LISTENER.surface_event($crate::hal::SurfaceEvent {
-                surface_event_type: if event == 1 {
-                    $crate::hal::SurfaceEventType::Setup
+            EVENT_LISTENER.button_event($crate::hal::surface::ButtonEvent {
+                button: if event == 1 {
+                    $crate::hal::surface::Button::Setup
                 } else {
-                    $crate::hal::SurfaceEventType::Pad
+                    $crate::hal::surface::Button::Pad($crate::hal::Point::from_index(index))
                 },
-                point: $crate::hal::Point::from_index(index),
-                value: if value == 0 {
-                    $crate::hal::SurfaceEventValue::Release
+                event: if value == 0 {
+                    $crate::hal::surface::Event::Release
                 } else {
-                    $crate::hal::SurfaceEventValue::Press(value)
+                    $crate::hal::surface::Event::Press(value)
                 },
             });
         }
@@ -300,7 +458,7 @@ macro_rules! register_event_listener {
 
         #[no_mangle]
         pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
-            EVENT_LISTENER.aftertouch_event($crate::hal::AftertouchEvent {
+            EVENT_LISTENER.aftertouch_event($crate::hal::surface::AftertouchEvent {
                 point: $crate::hal::Point::from_index(index),
                 value,
             });
@@ -329,7 +487,7 @@ macro_rules! register_event_listener {
 
         #[no_mangle]
         pub extern "C" fn app_init(adc: *const u16) {
-            EVENT_LISTENER.init_event($crate::hal::ADC::new(adc));
+            EVENT_LISTENER.init_event($crate::hal::surface::Pads::new(adc));
         }
     };
 }
@@ -390,45 +548,10 @@ mod tests {
     }
 
     #[test]
-    fn adc_offset_calculation() {
-        assert_eq!(ADC::point_to_offset(Point::new(0, 0)), None);
-        assert_eq!(ADC::point_to_offset(Point::new(1, 1)), Some(0));
-        assert_eq!(ADC::point_to_offset(Point::new(2, 2)), Some(18));
-        assert_eq!(ADC::point_to_offset(Point::new(3, 3)), Some(36));
-        assert_eq!(ADC::point_to_offset(Point::new(4, 4)), Some(54));
-        assert_eq!(ADC::point_to_offset(Point::new(5, 5)), Some(9));
-        assert_eq!(ADC::point_to_offset(Point::new(6, 6)), Some(27));
-        assert_eq!(ADC::point_to_offset(Point::new(7, 7)), Some(45));
-        assert_eq!(ADC::point_to_offset(Point::new(8, 8)), Some(63));
-        assert_eq!(ADC::point_to_offset(Point::new(9, 9)), None);
-        assert_eq!(ADC::point_to_offset(Point::new(8, 1)), Some(14));
-        assert_eq!(ADC::point_to_offset(Point::new(4, 3)), Some(38));
-        assert_eq!(ADC::point_to_offset(Point::new(3, 6)), Some(21));
-        assert_eq!(ADC::point_to_offset(Point::new(1, 8)), Some(49));
-        assert_eq!(ADC::point_to_offset(Point::new(4, 4)), Some(54));
-        assert_eq!(ADC::point_to_offset(Point::new(5, 5)), Some(9));
-        assert_eq!(ADC::point_to_offset(Point::new(11, 11)), Some(0));
-        assert_eq!(ADC::point_to_offset(Point::new(7, 5)), Some(13));
-        assert_eq!(ADC::point_to_offset(Point::new(8, 8)), Some(63));
-        assert_eq!(ADC::point_to_offset(Point::new(10, 10)), None);
-        assert_eq!(ADC::point_to_offset(Point::from_index(11)), Some(0));
-        assert_eq!(ADC::point_to_offset(Point::from_index(51)), Some(1));
-        assert_eq!(ADC::point_to_offset(Point::from_index(12)), Some(2));
-        assert_eq!(ADC::point_to_offset(Point::from_index(52)), Some(3));
-        assert_eq!(ADC::point_to_offset(Point::from_index(0)), None);
-    }
-
-    #[test]
-    fn read_adc_value() {
-        let mut values = [0 as u16; ADC::PAD_COUNT];
-        let wrapper = ADC::new(values.as_ptr());
-
-        assert_eq!(wrapper.read(Point::new(0, 0)), None);
-
-        values[16] = 7;
-        assert_eq!(wrapper.read(Point::new(1, 2)), Some(7));
-
-        values[16] = 34;
-        assert_eq!(wrapper.read(Point::new(1, 2)), Some(34));
+    fn colors() {
+        let red = Rgb::new(255, 0, 0);
+        assert_eq!(red.0, 63);
+        assert_eq!(red.1, 0);
+        assert_eq!(red.2, 0);
     }
 }

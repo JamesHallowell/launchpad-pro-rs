@@ -7,7 +7,7 @@ use core::panic::PanicInfo;
 mod life;
 
 use launchpad_pro_rs::hal;
-use launchpad_pro_rs::hal::{EventListener, SurfaceEvent};
+use launchpad_pro_rs::hal::EventListener;
 use launchpad_pro_rs::register_event_listener;
 
 use life::Life;
@@ -41,8 +41,8 @@ impl App {
     fn draw_universe(&self) {
         let life = self.life.lock();
         for point in hal::Grid::points() {
-            hal::plot_led(
-                point.to_index(),
+            hal::surface::set_led(
+                point,
                 match life.get(point) {
                     life::Cell::Alive => hal::Rgb::new(0, 255, 0),
                     life::Cell::Dead => hal::Rgb::new(0, 0, 0),
@@ -83,14 +83,14 @@ impl EventListener for App {
         }
     }
 
-    fn surface_event(&self, surface_event: SurfaceEvent) {
-        if surface_event.value == hal::SurfaceEventValue::Release {
-            match surface_event.surface_event_type {
-                hal::SurfaceEventType::Pad => {
-                    self.toggle_cell(surface_event.point);
+    fn button_event(&self, button_event: hal::surface::ButtonEvent) {
+        if let hal::surface::Event::Release = button_event.event {
+            match button_event.button {
+                hal::surface::Button::Pad(point) => {
+                    self.toggle_cell(point);
                     self.draw_universe();
                 }
-                hal::SurfaceEventType::Setup => {
+                hal::surface::Button::Setup => {
                     self.toggle_is_running();
                 }
             }
@@ -114,7 +114,6 @@ fn main() {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use launchpad_pro_rs::hal::{SurfaceEventType, SurfaceEventValue};
 
     #[test]
     fn app_starts_paused_until_setup_button_is_pressed() {
@@ -125,10 +124,9 @@ mod tests {
         assert_eq!(*app.is_running.lock(), false);
 
         // create a single cell that will immediately die once the simulation starts
-        app.surface_event(SurfaceEvent {
-            surface_event_type: SurfaceEventType::Pad,
-            point: hal::Point::new(5, 5),
-            value: SurfaceEventValue::Release,
+        app.button_event(hal::surface::ButtonEvent {
+            button: hal::surface::Button::Pad(hal::Point::new(5, 5)),
+            event: hal::surface::Event::Release,
         });
 
         // expect that the cell we created is now alive
@@ -149,10 +147,9 @@ mod tests {
         );
 
         // press the setup button to unpause the simulation
-        app.surface_event(SurfaceEvent {
-            surface_event_type: SurfaceEventType::Setup,
-            point: hal::Point::new(0, 9),
-            value: SurfaceEventValue::Release,
+        app.button_event(hal::surface::ButtonEvent {
+            button: hal::surface::Button::Setup,
+            event: hal::surface::Event::Release,
         });
 
         // check that our button press was registered
