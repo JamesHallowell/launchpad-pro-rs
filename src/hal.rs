@@ -203,6 +203,9 @@ pub mod surface {
         adc: *const u16
     }
 
+    /// TODO: Ouch! Not sure what the alternative is at the moment...
+    unsafe impl Send for Pads {}
+
     impl Pads {
         /// The number of pads on the Launchpad Pro.
         const PAD_COUNT: usize = 64;
@@ -451,8 +454,8 @@ macro_rules! register_event_listener {
             };
 
             if let Some(port) = port {
-                let data = unsafe { core::slice::from_raw_parts(data, count as usize) };
-                EVENT_LISTENER.sysex_event(port, data);
+                let slice = unsafe { core::slice::from_raw_parts(data, count as usize) };
+                EVENT_LISTENER.sysex_event(port, slice);
             }
         }
 
