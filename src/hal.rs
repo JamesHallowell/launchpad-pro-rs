@@ -230,7 +230,7 @@ pub mod surface {
         adc: *const u16
     }
 
-    /// TODO: Ouch! Not sure what the alternative is at the moment...
+    unsafe impl Sync for Pads {}
     unsafe impl Send for Pads {}
 
     impl Pads {
