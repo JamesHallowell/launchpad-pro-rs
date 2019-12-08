@@ -8,6 +8,26 @@ extern "C" {
     fn hal_send_sysex(port: u8, data: *const u8, length: u16);
 }
 
+#[cfg(not(target_device = "launchpad"))]
+unsafe fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8) {
+    println!("plot_led, type: {}, index: {}, color: ({}, {}, {})", t, index, red, green, blue);
+}
+
+#[cfg(not(target_device = "launchpad"))]
+unsafe fn hal_read_led(t: u8, index: u8, _red: *mut u8, _green: *mut u8, _blue: *mut u8) {
+    println!("read_led, type: {}, index: {}", t, index);
+}
+
+#[cfg(not(target_device = "launchpad"))]
+unsafe fn hal_send_midi(port: u8, status: u8, data1: u8, data2: u8) {
+    println!("send_midi, port: {}, status: {}, data: ({}, {})", port, status, data1, data2);
+}
+
+#[cfg(not(target_device = "launchpad"))]
+unsafe fn hal_send_sysex(port: u8, _data: *const u8, length: u16) {
+    println!("send_sysex, port: {}, length: {}", port, length);
+}
+
 /// The Launchpad Pro grid.
 pub struct Grid;
 
@@ -159,12 +179,11 @@ pub mod surface {
     ///
     /// set_led(Point::new(5, 5), Rgb::new(255, 127, 0));
     /// ```
-    pub fn set_led(point: Point, _rgb: Rgb) {
+    pub fn set_led(point: Point, rgb: Rgb) {
         if point.to_index() < super::Grid::size() {
-            #[cfg(target_device = "launchpad")]
             unsafe {
-                super::hal_plot_led(0, point.to_index(), _rgb.0, _rgb.1, _rgb.2);
-            }
+                super::hal_plot_led(0, point.to_index(), rgb.0, rgb.1, rgb.2);
+            };
         }
     }
 
@@ -180,14 +199,13 @@ pub mod surface {
     /// ```
     pub fn read_led(point: Point) -> Option<Rgb> {
         if point.to_index() < super::Grid::size() {
-            #[cfg(target_device = "launchpad")]
+            let mut red = 0;
+            let mut green = 0;
+            let mut blue = 0;
             unsafe {
-                let mut red = 0;
-                let mut green = 0;
-                let mut blue = 0;
                 super::hal_read_led(0, point.to_index(), &mut red, &mut green, &mut blue);
-                return Some(Rgb(red, green, blue));
-            }
+            };
+            return Some(Rgb(red, green, blue));
         }
         None
     }
@@ -353,10 +371,9 @@ pub mod midi {
     ///
     /// send_message(Port::DIN, Message::new(0x90, (60, 127)));
     /// ```
-    pub fn send_message(_port: Port, _message: Message) {
-        #[cfg(target_device = "launchpad")]
+    pub fn send_message(port: Port, message: Message) {
         unsafe {
-            super::hal_send_midi(_port as u8, _message.status, _message.data.0, _message.data.1);
+            super::hal_send_midi(port as u8, message.status, message.data.0, message.data.1);
         }
     }
 
@@ -373,11 +390,10 @@ pub mod midi {
     /// let sysex_message = [0xF0, 0xDE, 0xAD, 0xBE, 0xEF, 0xF7];
     /// send_sysex(Port::USB, &sysex_message);
     /// ```
-    pub fn send_sysex(_port: Port, data: &[u8]) {
+    pub fn send_sysex(port: Port, data: &[u8]) {
         if data.len() <= 320 {
-            #[cfg(target_device = "launchpad")]
             unsafe {
-                crate::hal::hal_send_sysex(_port as u8, data.as_ptr(), data.len() as u16);
+                crate::hal::hal_send_sysex(port as u8, data.as_ptr(), data.len() as u16);
             }
         }
     }
