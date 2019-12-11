@@ -1,4 +1,4 @@
-#![cfg_attr(target_device = "launchpad", no_std)]
+#![cfg_attr(target_arch="arm", no_std)]
 
 /// The interface to the Launchpad Pro hardware.
 pub mod hal;

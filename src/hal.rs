@@ -1,6 +1,6 @@
 use core::ops::Add;
 
-#[cfg(target_device = "launchpad")]
+#[cfg(target_arch="arm")]
 extern "C" {
     fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8);
     fn hal_read_led(t: u8, index: u8, red: *mut u8, green: *mut u8, blue: *mut u8);
@@ -8,22 +8,22 @@ extern "C" {
     fn hal_send_sysex(port: u8, data: *const u8, length: u16);
 }
 
-#[cfg(not(target_device = "launchpad"))]
+#[cfg(not(target_arch="arm"))]
 unsafe fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8) {
     println!("plot_led, type: {}, index: {}, color: ({}, {}, {})", t, index, red, green, blue);
 }
 
-#[cfg(not(target_device = "launchpad"))]
+#[cfg(not(target_arch="arm"))]
 unsafe fn hal_read_led(t: u8, index: u8, _red: *mut u8, _green: *mut u8, _blue: *mut u8) {
     println!("read_led, type: {}, index: {}", t, index);
 }
 
-#[cfg(not(target_device = "launchpad"))]
+#[cfg(not(target_arch="arm"))]
 unsafe fn hal_send_midi(port: u8, status: u8, data1: u8, data2: u8) {
     println!("send_midi, port: {}, status: {}, data: ({}, {})", port, status, data1, data2);
 }
 
-#[cfg(not(target_device = "launchpad"))]
+#[cfg(not(target_arch="arm"))]
 unsafe fn hal_send_sysex(port: u8, _data: *const u8, length: u16) {
     println!("send_sysex, port: {}, length: {}", port, length);
 }

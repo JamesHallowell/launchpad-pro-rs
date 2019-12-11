@@ -1,7 +1,7 @@
-#![cfg_attr(target_device = "launchpad", no_std)]
-#![cfg_attr(target_device = "launchpad", no_main)]
+#![cfg_attr(target_arch="arm", no_std)]
+#![cfg_attr(target_arch="arm", no_main)]
 
-#[cfg(target_device = "launchpad")]
+#[cfg(target_arch="arm")]
 use core::panic::PanicInfo;
 
 mod life;
@@ -102,13 +102,13 @@ impl EventListener for App {
 static APP: App = App::new();
 register_event_listener!(APP);
 
-#[cfg(target_device = "launchpad")]
+#[cfg(target_arch="arm")]
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-#[cfg(not(target_device = "launchpad"))]
+#[cfg(not(target_arch="arm"))]
 fn main() {}
 
 #[cfg(test)]

@@ -1,6 +1,5 @@
 [target.thumbv7m-none-eabi]
 rustflags = [
-  "--cfg", 'target_device="launchpad"',
   "-C", "linker=arm-none-eabi-gcc",
   "-C", "link-arg=-Tstm32_flash.ld",
   "-C", "link-arg=-u _start",
