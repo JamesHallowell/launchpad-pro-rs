@@ -402,19 +402,19 @@ pub mod midi {
 /// The EventListener trait can be implemented to receive events from the Launchpad Pro hardware.
 pub trait EventListener: Sync {
     /// Called on startup.
-    fn init_event(&self, _pads: surface::Pads) {}
+    fn init_event(&self, _pads: surface::Pads);
     /// A 1 kHz (1 millisecond) timer.
-    fn timer_event(&self) {}
+    fn timer_event(&self);
     /// Called when a MIDI message is received from USB or DIN.
-    fn midi_event(&self, _port: midi::Port, _midi_event: midi::Message) {}
+    fn midi_event(&self, _port: midi::Port, _midi_event: midi::Message);
     /// Called when a SysEx message is received from USB or DIN.
-    fn sysex_event(&self, _port: midi::Port, _data: &[u8]) {}
+    fn sysex_event(&self, _port: midi::Port, _data: &[u8]);
     /// Called when a MIDI DIN cable is connected or disconnected.
-    fn cable_event(&self, _cable_event: midi::CableEvent) {}
+    fn cable_event(&self, _cable_event: midi::CableEvent);
     /// Called when the user presses or releases a button or pad on the surface.
-    fn button_event(&self, _button_event: surface::ButtonEvent) {}
+    fn button_event(&self, _button_event: surface::ButtonEvent);
     /// Called when an aftertouch (pad pressure) event is reported by the low level firmware.
-    fn aftertouch_event(&self, _aftertouch_event: surface::AftertouchEvent) {}
+    fn aftertouch_event(&self, _aftertouch_event: surface::AftertouchEvent);
 }
 
 /// Register an instance of some type that implements the `EventListener` trait to receive event
@@ -426,8 +426,9 @@ pub trait EventListener: Sync {
 ///
 /// ```
 /// use launchpad_pro_rs::hal::{EventListener, Point, Rgb};
-/// use launchpad_pro_rs::hal::surface::{Pads, set_led};
+/// use launchpad_pro_rs::hal::surface::{Pads, set_led, AftertouchEvent, ButtonEvent};
 /// use launchpad_pro_rs::register_event_listener;
+/// use launchpad_pro_rs::hal::midi::{Message, Port, CableEvent};
 ///
 /// struct App; // define our app type
 ///
@@ -438,6 +439,12 @@ pub trait EventListener: Sync {
 ///         // when the Launchpad is initialised we will set a white LED at the center of the grid
 ///         set_led(Point::new(5, 5), Rgb::new(255, 255, 255));
 ///     }
+///     fn timer_event(&self) {}
+///     fn midi_event(&self,_port: Port,_midi_event: Message) {}
+///     fn sysex_event(&self,_port: Port,_data: &[u8]) {}
+///     fn cable_event(&self,_cable_event: CableEvent) {}
+///     fn button_event(&self,_button_event: ButtonEvent) {}
+///     fn aftertouch_event(&self,_aftertouch_event: AftertouchEvent) {}
 /// }
 ///
 /// register_event_listener!(APP); // register it as the global event listener

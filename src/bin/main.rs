@@ -10,6 +10,8 @@ use launchpad_pro_rs::register_event_listener;
 
 /// The Launchpad Pro app.
 struct App;
+
+// Register an app instance to receive events from the hardware.
 register_event_listener!(App);
 
 /// Implementation of the EventListener trait to handle events from the Launchpad Pro.

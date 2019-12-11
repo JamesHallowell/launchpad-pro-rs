@@ -68,6 +68,9 @@ impl App {
 /// Implement the event listener trait for our app in order to be notified of events that occur on
 /// the Launchpad Pro hardware.
 impl EventListener for App {
+    fn init_event(&self, _pads: hal::surface::Pads) {
+    }
+
     fn timer_event(&self) {
         static TICKS: Mutex<i32> = Mutex::new(0);
 
@@ -83,6 +86,15 @@ impl EventListener for App {
         }
     }
 
+    fn midi_event(&self, _port: hal::midi::Port, _midi_event: hal::midi::Message) {
+    }
+
+    fn sysex_event(&self, _port: hal::midi::Port, _data: &[u8]) {
+    }
+
+    fn cable_event(&self, _cable_event: hal::midi::CableEvent) {
+    }
+
     fn button_event(&self, button_event: hal::surface::ButtonEvent) {
         if let hal::surface::Event::Release = button_event.event {
             match button_event.button {
@@ -96,10 +108,15 @@ impl EventListener for App {
             }
         }
     }
+
+    fn aftertouch_event(&self, _aftertouch_event: hal::surface::AftertouchEvent) {
+    }
 }
 
 /// Create a static instance of our app.
 static APP: App = App::new();
+
+// Register our app to receive events from the hardware.
 register_event_listener!(APP);
 
 #[cfg(target_arch="arm")]
