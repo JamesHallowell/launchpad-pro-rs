@@ -5,17 +5,17 @@
 use core::panic::PanicInfo;
 
 use launchpad_pro_rs::hal;
-use launchpad_pro_rs::hal::EventListener;
-use launchpad_pro_rs::register_event_listener;
+use launchpad_pro_rs::hal::LaunchpadApp;
+use launchpad_pro_rs::launchpad_app;
 
 /// The Launchpad Pro app.
 struct App;
 
 // Register an app instance to receive events from the hardware.
-register_event_listener!(App);
+launchpad_app!(App);
 
 /// Implementation of the EventListener trait to handle events from the Launchpad Pro.
-impl EventListener for App {
+impl LaunchpadApp for App {
     fn init_event(&self, _adc: hal::surface::Pads) {}
     fn timer_event(&self) {}
     fn midi_event(&self, _port: hal::midi::Port, _message: hal::midi::Message) {}

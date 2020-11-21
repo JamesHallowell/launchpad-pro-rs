@@ -7,43 +7,34 @@ use core::panic::PanicInfo;
 mod life;
 
 use launchpad_pro_rs::hal;
-use launchpad_pro_rs::hal::EventListener;
-use launchpad_pro_rs::register_event_listener;
+use launchpad_pro_rs::hal::LaunchpadApp;
+use launchpad_pro_rs::launchpad_app;
 
 use life::Life;
 
-use spin::Mutex;
-
-/// The number of frames per second in our simulation.
-const FRAMES_PER_SECOND: i32 = 4;
-
-/// The number of timer ticks per frame. Timer ticks happen at a frequency of ~1ms.
-const TICKS_PER_FRAME: i32 = 1000 / FRAMES_PER_SECOND;
-
-/// The Launchpad Pro app.
-struct App {
+/// The Launchpad Pro app state.
+struct State {
     /// A flag to indicate whether the Game of Life simulation is running.
-    is_running: Mutex<bool>,
+    is_running: bool,
     /// Our Game of Life state.
-    life: Mutex<Life>,
+    life: Life,
 }
 
-impl App {
+impl State {
     /// Create the app.
     const fn new() -> Self {
         Self {
-            is_running: Mutex::new(false),
-            life: Mutex::new(Life::new()),
+            is_running: false,
+            life: Life::new(),
         }
     }
 
     /// Draw the Game of Life universe on the Launchpad Pro grid.
     fn draw_universe(&self) {
-        let life = self.life.lock();
         for point in hal::Grid::points() {
             hal::surface::set_led(
                 point,
-                match life.get(point) {
+                match self.life.get(point) {
                     life::Cell::Alive => hal::Rgb::new(0, 255, 0),
                     life::Cell::Dead => hal::Rgb::new(0, 0, 0),
                 },
@@ -51,38 +42,64 @@ impl App {
         }
     }
 
+    /// Move the simulation forward by one tick.
+    fn tick(&mut self) {
+        self.life.tick();
+    }
+
     /// Toggle the state of the cell at the point on the grid.
-    fn toggle_cell(&self, point: hal::Point) {
-        let mut life = self.life.lock();
-        let toggled_state = !life.get(point);
-        life.set(point, toggled_state);
+    fn toggle_cell(&mut self, point: hal::Point) {
+        let toggled_state = !self.life.get(point);
+        self.life.set(point, toggled_state);
+    }
+
+    fn is_running(&self) -> bool {
+        self.is_running
     }
 
     /// Toggle whether the simulation is running.
-    fn toggle_is_running(&self) {
-        let mut is_running = self.is_running.lock();
-        *is_running = !*is_running;
+    fn toggle_is_running(&mut self) {
+        self.is_running = ! self.is_running;
     }
 }
 
-/// Implement the event listener trait for our app in order to be notified of events that occur on
+struct App {
+    state: hal::Mutex<State>
+}
+
+impl App {
+    const fn new() -> Self {
+        Self {
+            state: hal::Mutex::new(State::new())
+        }
+    }
+}
+
+/// Implement the LaunchpadApp trait for our app in order to be notified of events that occur on
 /// the Launchpad Pro hardware.
-impl EventListener for App {
+impl LaunchpadApp for App {
     fn init_event(&self, _pads: hal::surface::Pads) {
     }
 
     fn timer_event(&self) {
-        static TICKS: Mutex<i32> = Mutex::new(0);
+        /// The number of frames per second in our simulation.
+        const FRAMES_PER_SECOND: i32 = 4;
+        /// The number of timer ticks per frame. Timer ticks happen at a frequency of ~1ms.
+        const TICKS_PER_FRAME: i32 = 1000 / FRAMES_PER_SECOND;
+        /// A count of the number of timer callbacks.
+        static mut TICKS: i32 = 0;
 
-        let mut ticks = TICKS.lock();
-        if *ticks == TICKS_PER_FRAME {
-            if *self.is_running.lock() {
-                self.life.lock().tick();
-                self.draw_universe();
+        unsafe {
+            if TICKS == TICKS_PER_FRAME {
+                let mut state = self.state.lock();
+                if state.is_running() {
+                    state.tick();
+                    state.draw_universe();
+                }
+                TICKS = 0;
+            } else {
+                TICKS += 1;
             }
-            *ticks = 0;
-        } else {
-            *ticks += 1;
         }
     }
 
@@ -97,13 +114,15 @@ impl EventListener for App {
 
     fn button_event(&self, button_event: hal::surface::ButtonEvent) {
         if let hal::surface::Event::Release = button_event.event {
+            let mut state = self.state.lock();
+
             match button_event.button {
                 hal::surface::Button::Pad(point) => {
-                    self.toggle_cell(point);
-                    self.draw_universe();
+                    state.toggle_cell(point);
+                    state.draw_universe();
                 }
                 hal::surface::Button::Setup => {
-                    self.toggle_is_running();
+                    state.toggle_is_running();
                 }
             }
         }
@@ -117,7 +136,7 @@ impl EventListener for App {
 static APP: App = App::new();
 
 // Register our app to receive events from the hardware.
-register_event_listener!(APP);
+launchpad_app!(APP);
 
 #[cfg(target_arch="arm")]
 #[panic_handler]
