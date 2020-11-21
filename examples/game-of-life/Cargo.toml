@@ -1,0 +1,20 @@
+[package]
+name = "game-of-life"
+version = "0.1.0"
+authors = ["James Hallowell"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "game-of-life-bin"
+path = "src/lib.rs"
+
+[dependencies]
+launchpad-pro-hal = { path = "../../launchpad-pro-hal" }
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2.68"

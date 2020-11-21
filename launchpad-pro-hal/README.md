@@ -73,7 +73,7 @@ $ cargo sysex --example life
 
 Pressing buttons on the grid will create new life! You can pause/resume the simulation by pressing the Setup button.
 
-![](launchpad-pro-hal/life.gif)
+![](life.gif)
 
 ## Documentation
 

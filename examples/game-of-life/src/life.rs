@@ -1,4 +1,4 @@
-use crate::hal::{Grid, Point};
+use launchpad_pro_hal::hal::{Grid, Point};
 use core::ops::Not;
 
 /// A cell within the Game of Life.
@@ -86,10 +86,10 @@ impl Life {
             (0, 1),
             (1, 1),
         ]
-        .iter()
-        .map(|&(x, y)| point + Point::new(x, y))
-        .filter(|&p| self.get(p) == Cell::Alive)
-        .count() as u8
+            .iter()
+            .map(|&(x, y)| point + Point::new(x, y))
+            .filter(|&p| self.get(p) == Cell::Alive)
+            .count() as u8
     }
 }
 

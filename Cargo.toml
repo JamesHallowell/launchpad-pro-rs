@@ -1,22 +1,5 @@
-[package]
-name = "launchpad-pro-rs"
-version = "0.1.0"
-authors = ["James Hallowell"]
-edition = "2018"
-
-[dependencies]
-spin = "0.5.2"
-cfg-if = "1.0"
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-wasm-bindgen = "0.2.68"
-
-[[example]]
-name = "life-lpp"
-path = "examples/life/main.rs"
-crate-type = ["bin"]
-
-[[example]]
-name = "life-wasm"
-path = "examples/life/main.rs"
-crate-type = ["cdylib"]
+[workspace]
+members = [
+    "launchpad-pro-hal",
+    "examples/game-of-life"
+]

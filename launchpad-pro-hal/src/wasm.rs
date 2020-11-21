@@ -109,12 +109,12 @@ macro_rules! wasm_app {
         #[no_mangle]
         pub static __LAUNCHPAD_APP: &dyn $crate::hal::LaunchpadApp = &$app;
 
-        use wasm_bindgen::prelude::*;
-
         #[wasm_bindgen]
         pub fn app_init() {
             crate::hal::set_listener(__LAUNCHPAD_APP);
             __LAUNCHPAD_APP.init_event($crate::hal::surface::Pads::new(None));
         }
+
+        fn main() {}
     };
 }

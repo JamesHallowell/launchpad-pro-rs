@@ -3,9 +3,12 @@
 
 mod life;
 
-use launchpad_pro_rs::hal;
-use launchpad_pro_rs::hal::LaunchpadApp;
-use launchpad_pro_rs::launchpad_app;
+use launchpad_pro_hal::hal;
+use launchpad_pro_hal::hal::LaunchpadApp;
+use launchpad_pro_hal::launchpad_app;
+
+#[cfg(target_arch="wasm32")]
+use wasm_bindgen::prelude::*;
 
 use life::Life;
 

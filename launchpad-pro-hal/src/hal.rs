@@ -58,8 +58,8 @@ impl Grid {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::{Grid, Rgb};
-    /// use launchpad_pro_rs::hal::surface::set_led;
+    /// use launchpad_pro_hal::hal::{Grid, Rgb};
+    /// use launchpad_pro_hal::hal::surface::set_led;
     ///
     /// // set every led on the grid to blue
     /// for point in Grid::points() {
@@ -88,7 +88,7 @@ impl Rgb {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::Rgb;
+    /// use launchpad_pro_hal::hal::Rgb;
     ///
     /// let red = Rgb::new(255, 0, 0);
     /// let green = Rgb::new(0, 255, 0);
@@ -139,7 +139,7 @@ impl Point {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::Point;
+    /// use launchpad_pro_hal::hal::Point;
     ///
     /// let point = Point::from_index(55);
     /// assert_eq!(point, Point::new(5, 5));
@@ -156,7 +156,7 @@ impl Point {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::Point;
+    /// use launchpad_pro_hal::hal::Point;
     ///
     /// let point = Point::new(5, 5);
     /// assert_eq!(point.to_index(), 55);
@@ -180,8 +180,8 @@ pub mod surface {
     ///
     /// ```
     ///
-    /// use launchpad_pro_rs::hal::surface::set_led;
-    /// use launchpad_pro_rs::hal::{Point, Rgb};
+    /// use launchpad_pro_hal::hal::surface::set_led;
+    /// use launchpad_pro_hal::hal::{Point, Rgb};
     ///
     /// set_led(Point::new(5, 5), Rgb::new(255, 127, 0));
     /// ```
@@ -198,8 +198,8 @@ pub mod surface {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::surface::read_led;
-    /// use launchpad_pro_rs::hal::Point;
+    /// use launchpad_pro_hal::hal::surface::read_led;
+    /// use launchpad_pro_hal::hal::Point;
     ///
     /// let color = read_led(Point::new(0, 0));
     /// ```
@@ -374,7 +374,7 @@ pub mod midi {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::midi::{send_message, Port, Message};
+    /// use launchpad_pro_hal::hal::midi::{send_message, Port, Message};
     ///
     /// send_message(Port::DIN, Message::new(0x90, (60, 127)));
     /// ```
@@ -392,7 +392,7 @@ pub mod midi {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::midi::{send_sysex, Port};
+    /// use launchpad_pro_hal::hal::midi::{send_sysex, Port};
     ///
     /// let sysex_message = [0xF0, 0xDE, 0xAD, 0xBE, 0xEF, 0xF7];
     /// send_sysex(Port::USB, &sysex_message);
@@ -432,10 +432,10 @@ pub trait LaunchpadApp: Sync {
 /// # Example
 ///
 /// ```
-/// use launchpad_pro_rs::hal::{LaunchpadApp, Point, Rgb};
-/// use launchpad_pro_rs::hal::surface::{Pads, set_led, AftertouchEvent, ButtonEvent};
-/// use launchpad_pro_rs::launchpad_app;
-/// use launchpad_pro_rs::hal::midi::{Message, Port, CableEvent};
+/// use launchpad_pro_hal::hal::{LaunchpadApp, Point, Rgb};
+/// use launchpad_pro_hal::hal::surface::{Pads, set_led, AftertouchEvent, ButtonEvent};
+/// use launchpad_pro_hal::launchpad_app;
+/// use launchpad_pro_hal::hal::midi::{Message, Port, CableEvent};
 ///
 /// struct App; // define our app type
 ///

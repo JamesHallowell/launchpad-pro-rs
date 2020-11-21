@@ -1,7 +1,7 @@
 [target.thumbv7m-none-eabi]
 rustflags = [
   "-C", "linker=arm-none-eabi-gcc",
-  "-C", "link-arg=-Tlaunchpad-pro-hal/stm32_flash.ld",
+  "-C", "link-arg=-Tstm32_flash.ld",
   "-C", "link-arg=-u _start",
   "-C", "link-arg=-u _Minimum_Stack_Size",
   "-C", "link-arg=-mcpu=cortex-m3",
@@ -13,11 +13,10 @@ rustflags = [
   "-C", "link-arg=-N",
   "-C", "link-arg=-nostartfiles",
   "-C", "link-arg=-Wl,--gc-sections",
-  "-C", "link-arg=launchpad-pro-hal/lib/launchpad_pro.a",
+  "-C", "link-arg=lib/launchpad_pro.a",
 ]
 
 [alias]
-sysex = "make -- sysex"
 lpp-build = "build --target thumbv7m-none-eabi"
 wasm-build = "build --target wasm32-unknown-unknown"
 lpp-life = "build --target thumbv7m-none-eabi --example life-lpp"
