@@ -1,6 +1,4 @@
 use core::ops::Add;
-pub use lazy_static::lazy_static as lazy_static;
-pub use spin::Mutex as Mutex;
 
 #[cfg(target_arch="arm")]
 extern "C" {
@@ -402,23 +400,21 @@ pub mod midi {
 }
 
 /// The EventListener trait can be implemented to receive events from the Launchpad Pro hardware.
-pub trait LaunchpadApp {
-    /// Create a new app.
-    fn new() -> Self;
+pub trait EventListener: Sync {
     /// Called on startup.
-    fn init_event(&mut self, _pads: surface::Pads) {}
+    fn init_event(&self, _pads: surface::Pads);
     /// A 1 kHz (1 millisecond) timer.
-    fn timer_event(&mut self) {}
+    fn timer_event(&self);
     /// Called when a MIDI message is received from USB or DIN.
-    fn midi_event(&mut self, _port: midi::Port, _midi_event: midi::Message) {}
+    fn midi_event(&self, _port: midi::Port, _midi_event: midi::Message);
     /// Called when a SysEx message is received from USB or DIN.
-    fn sysex_event(&mut self, _port: midi::Port, _data: &[u8]) {}
+    fn sysex_event(&self, _port: midi::Port, _data: &[u8]);
     /// Called when a MIDI DIN cable is connected or disconnected.
-    fn cable_event(&mut self, _cable_event: midi::CableEvent) {}
+    fn cable_event(&self, _cable_event: midi::CableEvent);
     /// Called when the user presses or releases a button or pad on the surface.
-    fn button_event(&mut self, _button_event: surface::ButtonEvent) {}
+    fn button_event(&self, _button_event: surface::ButtonEvent);
     /// Called when an aftertouch (pad pressure) event is reported by the low level firmware.
-    fn aftertouch_event(&mut self, _aftertouch_event: surface::AftertouchEvent) {}
+    fn aftertouch_event(&self, _aftertouch_event: surface::AftertouchEvent);
 }
 
 /// Register an instance of some type that implements the `EventListener` trait to receive event
@@ -429,44 +425,39 @@ pub trait LaunchpadApp {
 /// # Example
 ///
 /// ```
-/// use launchpad_pro_rs::hal::{LaunchpadApp, Point, Rgb};
+/// use launchpad_pro_rs::hal::{EventListener, Point, Rgb};
 /// use launchpad_pro_rs::hal::surface::{Pads, set_led, AftertouchEvent, ButtonEvent};
-/// use launchpad_pro_rs::launchpad_app;
+/// use launchpad_pro_rs::register_event_listener;
 /// use launchpad_pro_rs::hal::midi::{Message, Port, CableEvent};
 ///
 /// struct App; // define our app type
 ///
-/// impl LaunchpadApp for App { // implement the EventListener trait for our app
-///     fn new() -> Self {
-///         App
-///     }
-///     fn init_event(&mut self, _: Pads) {
+/// static APP: App = App; // create a static instance of our app
+///
+/// impl EventListener for App { // implement the EventListener trait for our app
+///     fn init_event(&self, _: Pads) {
 ///         // when the Launchpad is initialised we will set a white LED at the center of the grid
 ///         set_led(Point::new(5, 5), Rgb::new(255, 255, 255));
 ///     }
-///     fn timer_event(&mut self) {}
-///     fn midi_event(&mut self,_port: Port,_midi_event: Message) {}
-///     fn sysex_event(&mut self,_port: Port,_data: &[u8]) {}
-///     fn cable_event(&mut self,_cable_event: CableEvent) {}
-///     fn button_event(&mut self,_button_event: ButtonEvent) {}
-///     fn aftertouch_event(&mut self,_aftertouch_event: AftertouchEvent) {}
+///     fn timer_event(&self) {}
+///     fn midi_event(&self,_port: Port,_midi_event: Message) {}
+///     fn sysex_event(&self,_port: Port,_data: &[u8]) {}
+///     fn cable_event(&self,_cable_event: CableEvent) {}
+///     fn button_event(&self,_button_event: ButtonEvent) {}
+///     fn aftertouch_event(&self,_aftertouch_event: AftertouchEvent) {}
 /// }
 ///
-/// launchpad_app!(App); // register it as the global event listener
+/// register_event_listener!(APP); // register it as the global event listener
 /// ```
-
 #[macro_export]
-macro_rules! launchpad_app {
-    ($handler:ty) => {
-        $crate::hal::lazy_static! {
-            static ref APP: $crate::hal::Mutex<$handler> = {
-                $crate::hal::Mutex::new(<$handler>::new())
-            };
-        }
+macro_rules! register_event_listener {
+    ($handler:expr) => {
+        #[no_mangle]
+        pub static EVENT_LISTENER: &dyn EventListener = &$handler;
 
         #[no_mangle]
         pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
-            APP.lock().button_event($crate::hal::surface::ButtonEvent {
+            EVENT_LISTENER.button_event($crate::hal::surface::ButtonEvent {
                 button: if event == 1 {
                     $crate::hal::surface::Button::Setup
                 } else {
@@ -490,7 +481,7 @@ macro_rules! launchpad_app {
             };
 
             if let Some(port) = port {
-                APP.lock().midi_event(port, $crate::hal::midi::Message {
+                EVENT_LISTENER.midi_event(port, $crate::hal::midi::Message {
                     status,
                     data: (data1, data2),
                 });
@@ -508,13 +499,13 @@ macro_rules! launchpad_app {
 
             if let Some(port) = port {
                 let slice = unsafe { core::slice::from_raw_parts(data, count as usize) };
-                APP.lock().sysex_event(port, slice);
+                EVENT_LISTENER.sysex_event(port, slice);
             }
         }
 
         #[no_mangle]
         pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
-            APP.lock().aftertouch_event($crate::hal::surface::AftertouchEvent {
+            EVENT_LISTENER.aftertouch_event($crate::hal::surface::AftertouchEvent {
                 point: $crate::hal::Point::from_index(index),
                 value,
             });
@@ -529,7 +520,7 @@ macro_rules! launchpad_app {
             };
 
             if let Some(cable_type) = cable_type {
-                APP.lock().cable_event(match value {
+                EVENT_LISTENER.cable_event(match value {
                     0 => $crate::hal::midi::CableEvent::Disconnect(cable_type),
                     _ => $crate::hal::midi::CableEvent::Connect(cable_type),
                 });
@@ -538,12 +529,12 @@ macro_rules! launchpad_app {
 
         #[no_mangle]
         pub extern "C" fn app_timer_event() {
-            APP.lock().timer_event();
+            EVENT_LISTENER.timer_event();
         }
 
         #[no_mangle]
         pub extern "C" fn app_init(adc: *const u16) {
-            APP.lock().init_event($crate::hal::surface::Pads::new(adc));
+            EVENT_LISTENER.init_event($crate::hal::surface::Pads::new(adc));
         }
     };
 }

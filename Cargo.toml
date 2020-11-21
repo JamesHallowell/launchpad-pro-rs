@@ -5,5 +5,4 @@ authors = ["James Hallowell"]
 edition = "2018"
 
 [dependencies]
-lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-spin = "0.7.0"
+spin = "0.5.2"
