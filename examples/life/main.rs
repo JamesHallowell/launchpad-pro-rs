@@ -75,6 +75,11 @@ impl App {
     }
 }
 
+/// The number of frames per second in our simulation.
+const FRAMES_PER_SECOND: i32 = 4;
+/// The number of timer ticks per frame. Timer ticks happen at a frequency of ~1ms.
+const TICKS_PER_FRAME: i32 = 1000 / FRAMES_PER_SECOND;
+
 /// Implement the LaunchpadApp trait for our app in order to be notified of events that occur on
 /// the Launchpad Pro hardware.
 impl LaunchpadApp for App {
@@ -82,10 +87,6 @@ impl LaunchpadApp for App {
     }
 
     fn timer_event(&self) {
-        /// The number of frames per second in our simulation.
-        const FRAMES_PER_SECOND: i32 = 4;
-        /// The number of timer ticks per frame. Timer ticks happen at a frequency of ~1ms.
-        const TICKS_PER_FRAME: i32 = 1000 / FRAMES_PER_SECOND;
         /// A count of the number of timer callbacks.
         static mut TICKS: i32 = 0;
 
@@ -157,7 +158,7 @@ mod tests {
         let app = App::new();
 
         // we expect that our newly created app will start paused
-        assert_eq!(*app.is_running.lock(), false);
+        assert_eq!(app.state.lock().is_running, false);
 
         // create a single cell that will immediately die once the simulation starts
         app.button_event(hal::surface::ButtonEvent {
@@ -167,7 +168,7 @@ mod tests {
 
         // expect that the cell we created is now alive
         assert_eq!(
-            app.life.lock().get(hal::Point::new(5, 5)),
+            app.state.lock().life.get(hal::Point::new(5, 5)),
             life::Cell::Alive
         );
 
@@ -178,7 +179,7 @@ mod tests {
 
         // check that our cell is still alive
         assert_eq!(
-            app.life.lock().get(hal::Point::new(5, 5)),
+            app.state.lock().life.get(hal::Point::new(5, 5)),
             life::Cell::Alive
         );
 
@@ -189,7 +190,7 @@ mod tests {
         });
 
         // check that our button press was registered
-        assert_eq!(*app.is_running.lock(), true);
+        assert_eq!(app.state.lock().is_running, true);
 
         // call the timer until the simulation is progressed by one tick
         for _ in 0..TICKS_PER_FRAME {
@@ -197,6 +198,6 @@ mod tests {
         }
 
         // now that the simulation as started we expect that our solitary cell has died
-        assert_eq!(app.life.lock().get(hal::Point::new(5, 5)), life::Cell::Dead);
+        assert_eq!(app.state.lock().life.get(hal::Point::new(5, 5)), life::Cell::Dead);
     }
 }
