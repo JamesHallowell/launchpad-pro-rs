@@ -1,5 +1,8 @@
 use core::ops::Add;
 
+#[cfg(target_arch="wasm32")]
+use wasm_bindgen::prelude::*;
+
 pub use spin::Mutex as Mutex;
 
 #[cfg(target_arch="arm")]
@@ -10,21 +13,26 @@ extern "C" {
     fn hal_send_sysex(port: u8, data: *const u8, length: u16);
 }
 
-#[cfg(not(target_arch="arm"))]
-unsafe fn hal_plot_led(_t: u8, _index: u8, _red: u8, _green: u8, _blue: u8) {
+#[cfg(target_arch="wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8);
+    fn hal_read_led(t: u8, index: u8, red: *mut u8, green: *mut u8, blue: *mut u8);
+    fn hal_send_midi(port: u8, status: u8, data1: u8, data2: u8);
+    fn hal_send_sysex(port: u8, data: *const u8, length: u16);
 }
 
-#[cfg(not(target_arch="arm"))]
-unsafe fn hal_read_led(_t: u8, _index: u8, _red: *mut u8, _green: *mut u8, _blue: *mut u8) {
-}
+#[cfg(all(not(target_arch="arm"), not(target_arch="wasm32")))]
+unsafe fn hal_plot_led(_t: u8, _index: u8, _red: u8, _green: u8, _blue: u8) {}
 
-#[cfg(not(target_arch="arm"))]
-unsafe fn hal_send_midi(_port: u8, _status: u8, _data1: u8, _data2: u8) {
-}
+#[cfg(all(not(target_arch="arm"), not(target_arch="wasm32")))]
+unsafe fn hal_read_led(_t: u8, _index: u8, _red: *mut u8, _green: *mut u8, _blue: *mut u8) {}
 
-#[cfg(not(target_arch="arm"))]
-unsafe fn hal_send_sysex(_port: u8, _data: *const u8, _length: u16) {
-}
+#[cfg(all(not(target_arch="arm"), not(target_arch="wasm32")))]
+unsafe fn hal_send_midi(_port: u8, _status: u8, _data1: u8, _data2: u8) {}
+
+#[cfg(all(not(target_arch="arm"), not(target_arch="wasm32")))]
+unsafe fn hal_send_sysex(_port: u8, _data: *const u8, _length: u16) {}
 
 /// The Launchpad Pro grid.
 pub struct Grid;
@@ -240,7 +248,7 @@ pub mod surface {
 
     /// A wrapper around the raw ADC pointer to allow reading values from the pads.
     pub struct Pads {
-        adc: *const u16
+        adc: Option<*const u16>
     }
 
     unsafe impl Sync for Pads {}
@@ -248,18 +256,19 @@ pub mod surface {
 
     impl Pads {
         /// Construct a new Pads instance from a raw ADC pointer.
-        pub fn new(adc: *const u16) -> Self {
+        pub fn new(adc: Option<*const u16>) -> Self {
             Self { adc }
         }
 
         /// Read a 12-bit value from a pad at a given point on the grid. If there isn't a pad at the
         /// point provided then this function will return None.
         pub fn read(&self, pos: Point) -> Option<u16> {
-            if let Some(offset) = Self::point_to_offset(pos) {
-                Some(unsafe { *self.adc.offset(offset as isize) })
-            } else {
-                None
+            if let Some(adc) = self.adc {
+                if let Some(offset) = Self::point_to_offset(pos) {
+                    return Some(unsafe { *adc.offset(offset as isize) });
+                }
             }
+            None
         }
 
         /// For technical reasons the offsets from the ADC pointer use a slightly odd scheme.
@@ -314,7 +323,7 @@ pub mod surface {
     #[test]
     fn read_adc_value() {
         let mut values = [0 as u16; 64];
-        let pads = Pads::new(values.as_ptr());
+        let pads = Pads::new(Some(values.as_ptr()));
 
         assert_eq!(pads.read(Point::new(0, 0)), None);
 
@@ -448,10 +457,11 @@ pub fn set_listener(listener: &'static dyn LaunchpadApp) {
     unsafe { EVENT_LISTENER.replace(listener); }
 }
 
-fn get_listener() -> Option<&'static dyn LaunchpadApp> {
+pub(crate) fn get_listener() -> Option<&'static dyn LaunchpadApp> {
     unsafe { EVENT_LISTENER }
 }
 
+#[cfg(target_arch="arm")]
 #[no_mangle]
 pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
     if let Some(listener) = get_listener() {
@@ -470,6 +480,7 @@ pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
     }
 }
 
+#[cfg(target_arch="arm")]
 #[no_mangle]
 pub extern "C" fn app_midi_event(port: u8, status: u8, data1: u8, data2: u8) {
     if let Some(listener) = get_listener()  {
@@ -489,6 +500,7 @@ pub extern "C" fn app_midi_event(port: u8, status: u8, data1: u8, data2: u8) {
     }
 }
 
+#[cfg(target_arch="arm")]
 #[no_mangle]
 pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
     if let Some(listener) = get_listener()  {
@@ -507,6 +519,7 @@ pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
 
 }
 
+#[cfg(target_arch="arm")]
 #[no_mangle]
 pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
     if let Some(listener) = get_listener()  {
@@ -517,6 +530,7 @@ pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
     }
 }
 
+#[cfg(target_arch="arm")]
 #[no_mangle]
 extern "C" fn app_cable_event(cable_type: u8, value: u8) {
     if let Some(listener) = get_listener()  {
@@ -535,6 +549,7 @@ extern "C" fn app_cable_event(cable_type: u8, value: u8) {
     }
 }
 
+#[cfg(target_arch="arm")]
 #[no_mangle]
 pub extern "C" fn app_timer_event() {
     if let Some(listener) = get_listener() {
