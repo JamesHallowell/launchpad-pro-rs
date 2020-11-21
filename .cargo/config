@@ -18,3 +18,7 @@ rustflags = [
 
 [alias]
 sysex = "make -- sysex"
+lpp-build = "build --target thumbv7m-none-eabi"
+wasm-build = "build --target wasm32-unknown-unknown"
+lpp-life = "build --target thumbv7m-none-eabi --example life-lpp"
+wasm-life = "build --target wasm32-unknown-unknown --example life-wasm"

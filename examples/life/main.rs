@@ -1,9 +1,6 @@
 #![cfg_attr(target_arch="arm", no_std)]
 #![cfg_attr(target_arch="arm", no_main)]
 
-#[cfg(target_arch="arm")]
-use core::panic::PanicInfo;
-
 mod life;
 
 use launchpad_pro_rs::hal;
@@ -53,6 +50,7 @@ impl State {
         self.life.set(point, toggled_state);
     }
 
+    /// Returns true if the simulation is currently running.
     fn is_running(&self) -> bool {
         self.is_running
     }
@@ -83,9 +81,6 @@ const TICKS_PER_FRAME: i32 = 1000 / FRAMES_PER_SECOND;
 /// Implement the LaunchpadApp trait for our app in order to be notified of events that occur on
 /// the Launchpad Pro hardware.
 impl LaunchpadApp for App {
-    fn init_event(&self, _pads: hal::surface::Pads) {
-    }
-
     fn timer_event(&self) {
         /// A count of the number of timer callbacks.
         static mut TICKS: i32 = 0;
@@ -104,15 +99,6 @@ impl LaunchpadApp for App {
         }
     }
 
-    fn midi_event(&self, _port: hal::midi::Port, _midi_event: hal::midi::Message) {
-    }
-
-    fn sysex_event(&self, _port: hal::midi::Port, _data: &[u8]) {
-    }
-
-    fn cable_event(&self, _cable_event: hal::midi::CableEvent) {
-    }
-
     fn button_event(&self, button_event: hal::surface::ButtonEvent) {
         if let hal::surface::Event::Release = button_event.event {
             let mut state = self.state.lock();
@@ -128,9 +114,6 @@ impl LaunchpadApp for App {
             }
         }
     }
-
-    fn aftertouch_event(&self, _aftertouch_event: hal::surface::AftertouchEvent) {
-    }
 }
 
 /// Create a static instance of our app.
@@ -138,15 +121,6 @@ static APP: App = App::new();
 
 // Register our app to receive events from the hardware.
 launchpad_app!(APP);
-
-#[cfg(target_arch="arm")]
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
-
-#[cfg(not(target_arch="arm"))]
-fn main() {}
 
 #[cfg(test)]
 mod tests {

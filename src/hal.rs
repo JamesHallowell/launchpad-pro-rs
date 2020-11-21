@@ -11,23 +11,19 @@ extern "C" {
 }
 
 #[cfg(not(target_arch="arm"))]
-unsafe fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8) {
-    println!("plot_led, type: {}, index: {}, color: ({}, {}, {})", t, index, red, green, blue);
+unsafe fn hal_plot_led(_t: u8, _index: u8, _red: u8, _green: u8, _blue: u8) {
 }
 
 #[cfg(not(target_arch="arm"))]
-unsafe fn hal_read_led(t: u8, index: u8, _red: *mut u8, _green: *mut u8, _blue: *mut u8) {
-    println!("read_led, type: {}, index: {}", t, index);
+unsafe fn hal_read_led(_t: u8, _index: u8, _red: *mut u8, _green: *mut u8, _blue: *mut u8) {
 }
 
 #[cfg(not(target_arch="arm"))]
-unsafe fn hal_send_midi(port: u8, status: u8, data1: u8, data2: u8) {
-    println!("send_midi, port: {}, status: {}, data: ({}, {})", port, status, data1, data2);
+unsafe fn hal_send_midi(_port: u8, _status: u8, _data1: u8, _data2: u8) {
 }
 
 #[cfg(not(target_arch="arm"))]
-unsafe fn hal_send_sysex(port: u8, _data: *const u8, length: u16) {
-    println!("send_sysex, port: {}, length: {}", port, length);
+unsafe fn hal_send_sysex(_port: u8, _data: *const u8, _length: u16) {
 }
 
 /// The Launchpad Pro grid.
@@ -449,14 +445,16 @@ pub trait LaunchpadApp: Sync {
 static mut EVENT_LISTENER: Option<&dyn LaunchpadApp> = None;
 
 pub fn set_listener(listener: &'static dyn LaunchpadApp) {
-    unsafe {
-        EVENT_LISTENER.replace(listener);
-    }
+    unsafe { EVENT_LISTENER.replace(listener); }
+}
+
+fn get_listener() -> Option<&'static dyn LaunchpadApp> {
+    unsafe { EVENT_LISTENER }
 }
 
 #[no_mangle]
 pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
+    if let Some(listener) = get_listener() {
         listener.button_event(surface::ButtonEvent {
             button: if event == 1 {
                 surface::Button::Setup
@@ -474,7 +472,7 @@ pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
 
 #[no_mangle]
 pub extern "C" fn app_midi_event(port: u8, status: u8, data1: u8, data2: u8) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
+    if let Some(listener) = get_listener()  {
         let port = match port {
             0 => Some(midi::Port::Standalone),
             1 => Some(midi::Port::USB),
@@ -493,7 +491,7 @@ pub extern "C" fn app_midi_event(port: u8, status: u8, data1: u8, data2: u8) {
 
 #[no_mangle]
 pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
+    if let Some(listener) = get_listener()  {
         let port = match port {
             0 => Some(midi::Port::Standalone),
             1 => Some(midi::Port::USB),
@@ -511,7 +509,7 @@ pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
 
 #[no_mangle]
 pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
+    if let Some(listener) = get_listener()  {
         listener.aftertouch_event(surface::AftertouchEvent {
             point: Point::from_index(index),
             value,
@@ -521,7 +519,7 @@ pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
 
 #[no_mangle]
 extern "C" fn app_cable_event(cable_type: u8, value: u8) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
+    if let Some(listener) = get_listener()  {
         let cable_type = match cable_type {
             0 => Some(midi::Cable::MidiIn),
             1 => Some(midi::Cable::MidiOut),
@@ -539,23 +537,9 @@ extern "C" fn app_cable_event(cable_type: u8, value: u8) {
 
 #[no_mangle]
 pub extern "C" fn app_timer_event() {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
+    if let Some(listener) = get_listener() {
         listener.timer_event();
     }
-}
-
-#[macro_export]
-macro_rules! launchpad_app {
-    ($app:expr) => {
-        #[no_mangle]
-        pub static __LAUNCHPAD_APP: &dyn $crate::hal::LaunchpadApp = &$app;
-
-        #[no_mangle]
-        pub extern "C" fn app_init(adc: *const u16) {
-            $crate::hal::set_listener(__LAUNCHPAD_APP);
-            __LAUNCHPAD_APP.init_event($crate::hal::surface::Pads::new(adc));
-        }
-    };
 }
 
 #[cfg(test)]
