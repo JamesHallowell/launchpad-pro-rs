@@ -10,6 +10,13 @@ use launchpad_pro_hal::launchpad_app;
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;
 
+#[cfg(target_arch="wasm32")]
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
 use life::Life;
 
 /// The Launchpad Pro app state.
@@ -32,14 +39,18 @@ impl State {
     /// Draw the Game of Life universe on the Launchpad Pro grid.
     fn draw_universe(&self) {
         for point in hal::Grid::points() {
-            hal::surface::set_led(
-                point,
-                match self.life.get(point) {
-                    life::Cell::Alive => hal::Rgb::new(0, 255, 0),
-                    life::Cell::Dead => hal::Rgb::new(0, 0, 0),
-                },
-            );
+            self.draw_cell(point);
         }
+    }
+
+    fn draw_cell(&self, point: hal::Point) {
+        hal::surface::set_led(
+            point,
+            match self.life.get(point) {
+                life::Cell::Alive => hal::Rgb::GREEN,
+                life::Cell::Dead => hal::Rgb::BLACK,
+            },
+        );
     }
 
     /// Move the simulation forward by one tick.
@@ -51,6 +62,7 @@ impl State {
     fn toggle_cell(&mut self, point: hal::Point) {
         let toggled_state = !self.life.get(point);
         self.life.set(point, toggled_state);
+        self.draw_cell(point);
     }
 
     /// Returns true if the simulation is currently running.
@@ -77,7 +89,7 @@ impl App {
 }
 
 /// The number of frames per second in our simulation.
-const FRAMES_PER_SECOND: i32 = 4;
+const FRAMES_PER_SECOND: i32 = 10;
 /// The number of timer ticks per frame. Timer ticks happen at a frequency of ~1ms.
 const TICKS_PER_FRAME: i32 = 1000 / FRAMES_PER_SECOND;
 
@@ -109,7 +121,6 @@ impl LaunchpadApp for App {
             match button_event.button {
                 hal::surface::Button::Pad(point) => {
                     state.toggle_cell(point);
-                    state.draw_universe();
                 }
                 hal::surface::Button::Setup => {
                     state.toggle_is_running();

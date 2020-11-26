@@ -14,7 +14,7 @@ extern "C" {
 }
 
 #[cfg(target_arch="wasm32")]
-#[wasm_bindgen]
+#[wasm_bindgen(module="hal")]
 extern "C" {
     fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8);
     fn hal_read_led(t: u8, index: u8, red: *mut u8, green: *mut u8, blue: *mut u8);
@@ -77,11 +77,17 @@ impl Grid {
 pub struct Rgb(u8, u8, u8);
 
 /// Map an 8-bit value to a 6-bit range.
-fn convert_to_6_bit(led: u8) -> u8 {
+const fn convert_to_6_bit(led: u8) -> u8 {
     ((63 * (led as u16)) / (255)) as u8
 }
 
 impl Rgb {
+    pub const RED: Rgb = Rgb::new(255, 0, 0);
+    pub const GREEN: Rgb = Rgb::new(0, 255, 0);
+    pub const BLUE: Rgb = Rgb::new(0, 0, 255);
+    pub const WHITE: Rgb = Rgb::new(255, 255, 255);
+    pub const BLACK: Rgb = Rgb::new(0, 0, 0);
+
     /// Construct a new 18-bit RGB color. The arguments can be in the range `[0, 255]` but will be
     /// mapped and stored as 6-bits internally.
     ///
@@ -94,7 +100,7 @@ impl Rgb {
     /// let green = Rgb::new(0, 255, 0);
     /// let blue = Rgb::new(0, 0, 255);
     /// ```
-    pub fn new(red: u8, green: u8, blue: u8) -> Self {
+    pub const fn new(red: u8, green: u8, blue: u8) -> Self {
         Rgb(convert_to_6_bit(red), convert_to_6_bit(green), convert_to_6_bit(blue))
     }
 }
