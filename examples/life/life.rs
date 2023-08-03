@@ -1,5 +1,7 @@
-use crate::hal::{Grid, Point};
-use core::ops::Not;
+use {
+    crate::hal::{Grid, Point},
+    core::ops::Not,
+};
 
 /// A cell within the Game of Life.
 #[repr(u8)]
@@ -23,7 +25,7 @@ impl Not for Cell {
 /// The Game of Life.
 pub struct Life {
     universe: [[Cell; Grid::size() as usize]; 2], // double buffered universe
-    active: usize,
+    active_buffer_index: usize,
 }
 
 impl Life {
@@ -31,18 +33,18 @@ impl Life {
     pub const fn new() -> Self {
         Life {
             universe: [[Cell::Dead; Grid::size() as usize]; 2],
-            active: 0,
+            active_buffer_index: 0,
         }
     }
 
     /// Returns the state of the cell at the given point.
     pub fn get(&self, point: Point) -> Cell {
-        self.universe[self.active][point.to_index() as usize]
+        self.universe[self.active_buffer_index][point.to_index() as usize]
     }
 
     /// Set the state of a cell at the given point.
     pub fn set(&mut self, point: Point, cell: Cell) {
-        self.set_buffer(self.active, point, cell);
+        self.set_buffer(self.active_buffer_index, point, cell);
     }
 
     fn set_buffer(&mut self, buffer: usize, point: Point, cell: Cell) {
@@ -51,11 +53,11 @@ impl Life {
 
     /// Progress the simulation by one tick.
     pub fn tick(&mut self) {
-        let next_universe: usize = if self.active == 0 { 1 } else { 0 };
+        let next_buffer_index: usize = if self.active_buffer_index == 0 { 1 } else { 0 };
         for point in Grid::points() {
-            self.set_buffer(next_universe, point, self.next_state(point));
+            self.set_buffer(next_buffer_index, point, self.next_state(point));
         }
-        self.active = next_universe;
+        self.active_buffer_index = next_buffer_index;
     }
 
     /// Returns the next state of a cell at a point in the universe.

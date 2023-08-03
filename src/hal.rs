@@ -1,8 +1,9 @@
 use core::ops::Add;
 
-pub use spin::Mutex as Mutex;
+#[doc(hidden)]
+pub use spin::Mutex;
 
-#[cfg(target_arch="arm")]
+#[cfg(target_arch = "arm")]
 extern "C" {
     fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8);
     fn hal_read_led(t: u8, index: u8, red: *mut u8, green: *mut u8, blue: *mut u8);
@@ -10,22 +11,28 @@ extern "C" {
     fn hal_send_sysex(port: u8, data: *const u8, length: u16);
 }
 
-#[cfg(not(target_arch="arm"))]
+#[cfg(not(target_arch = "arm"))]
 unsafe fn hal_plot_led(t: u8, index: u8, red: u8, green: u8, blue: u8) {
-    println!("plot_led, type: {}, index: {}, color: ({}, {}, {})", t, index, red, green, blue);
+    println!(
+        "plot_led, type: {}, index: {}, color: ({}, {}, {})",
+        t, index, red, green, blue
+    );
 }
 
-#[cfg(not(target_arch="arm"))]
+#[cfg(not(target_arch = "arm"))]
 unsafe fn hal_read_led(t: u8, index: u8, _red: *mut u8, _green: *mut u8, _blue: *mut u8) {
     println!("read_led, type: {}, index: {}", t, index);
 }
 
-#[cfg(not(target_arch="arm"))]
+#[cfg(not(target_arch = "arm"))]
 unsafe fn hal_send_midi(port: u8, status: u8, data1: u8, data2: u8) {
-    println!("send_midi, port: {}, status: {}, data: ({}, {})", port, status, data1, data2);
+    println!(
+        "send_midi, port: {}, status: {}, data: ({}, {})",
+        port, status, data1, data2
+    );
 }
 
-#[cfg(not(target_arch="arm"))]
+#[cfg(not(target_arch = "arm"))]
 unsafe fn hal_send_sysex(port: u8, _data: *const u8, length: u16) {
     println!("send_sysex, port: {}, length: {}", port, length);
 }
@@ -54,12 +61,12 @@ impl Grid {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::{Grid, Rgb};
+    /// use launchpad_pro_rs::hal::{Grid, Rgb, Red, Green, Blue};
     /// use launchpad_pro_rs::hal::surface::set_led;
     ///
     /// // set every led on the grid to blue
     /// for point in Grid::points() {
-    ///     set_led(point, Rgb::new(0, 0, 255));
+    ///     set_led(point, Rgb::new(Red::new(0), Green::new(0), Blue::new(255)));
     /// }
     ///
     /// ```
@@ -68,12 +75,42 @@ impl Grid {
     }
 }
 
-/// An 18-bit RGB color.
+/// An RGB color.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Rgb(u8, u8, u8);
+pub struct Rgb(Red, Green, Blue);
+
+/// The red component of an RGB color.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Red(u8);
+
+impl Red {
+    pub const fn new(red: u8) -> Self {
+        Self(convert_to_6_bit(red))
+    }
+}
+
+/// The green component of an RGB color.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Green(u8);
+
+impl Green {
+    pub const fn new(green: u8) -> Self {
+        Self(convert_to_6_bit(green))
+    }
+}
+
+/// The blue component of an RGB color.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Blue(u8);
+
+impl Blue {
+    pub const fn new(blue: u8) -> Self {
+        Self(convert_to_6_bit(blue))
+    }
+}
 
 /// Map an 8-bit value to a 6-bit range.
-fn convert_to_6_bit(led: u8) -> u8 {
+const fn convert_to_6_bit(led: u8) -> u8 {
     ((63 * (led as u16)) / (255)) as u8
 }
 
@@ -84,15 +121,24 @@ impl Rgb {
     /// # Example
     ///
     /// ```
-    /// use launchpad_pro_rs::hal::Rgb;
+    /// use launchpad_pro_rs::hal::{Rgb, Red, Green, Blue};
     ///
-    /// let red = Rgb::new(255, 0, 0);
-    /// let green = Rgb::new(0, 255, 0);
-    /// let blue = Rgb::new(0, 0, 255);
+    /// let red = Rgb::new(Red::new(255), Green::new(0), Blue::new(0));
+    /// let green = Rgb::new(Red::new(0), Green::new(255), Blue::new(0));
+    /// let blue = Rgb::new(Red::new(0), Green::new(0), Blue::new(255));
     /// ```
-    pub fn new(red: u8, green: u8, blue: u8) -> Self {
-        Rgb(convert_to_6_bit(red), convert_to_6_bit(green), convert_to_6_bit(blue))
+    pub const fn new(red: Red, green: Green, blue: Blue) -> Self {
+        Rgb(red, green, blue)
     }
+
+    pub const RED: Self = Self(Red::new(255), Green::new(0), Blue::new(0));
+    pub const GREEN: Self = Self(Red::new(0), Green::new(255), Blue::new(0));
+    pub const BLUE: Self = Self(Red::new(0), Green::new(0), Blue::new(255));
+    pub const YELLOW: Self = Self(Red::new(255), Green::new(255), Blue::new(0));
+    pub const CYAN: Self = Self(Red::new(0), Green::new(255), Blue::new(255));
+    pub const MAGENTA: Self = Self(Red::new(255), Green::new(0), Blue::new(255));
+    pub const WHITE: Self = Self(Red::new(255), Green::new(255), Blue::new(255));
+    pub const BLACK: Self = Self(Red::new(0), Green::new(0), Blue::new(0));
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -112,7 +158,7 @@ impl Add for Point {
 
 impl Point {
     /// Construct a new point. Coordinates that exceed the bounds of the grid will be wrapped.
-    pub fn new(x: i8, y: i8) -> Self {
+    pub const fn new(x: i8, y: i8) -> Self {
         Point {
             x: (((x % Grid::width() as i8) + Grid::width() as i8) % Grid::width() as i8),
             y: (((y % Grid::height() as i8) + Grid::height() as i8) % Grid::height() as i8),
@@ -120,12 +166,12 @@ impl Point {
     }
 
     /// Returns the points x coordinate.
-    pub fn x(&self) -> i8 {
+    pub const fn x(&self) -> i8 {
         self.x
     }
 
     /// Returns the points y coordinate.
-    pub fn y(&self) -> i8 {
+    pub const fn y(&self) -> i8 {
         self.y
     }
 
@@ -143,7 +189,7 @@ impl Point {
     /// let point = Point::from_index(100);
     /// assert_eq!(point, Point::new(0, 0));
     /// ```
-    pub fn from_index(index: u8) -> Self {
+    pub const fn from_index(index: u8) -> Self {
         Point::new((index % 10) as i8, (index / 10) as i8)
     }
 
@@ -160,15 +206,14 @@ impl Point {
     /// let point = Point::new(10, 10);
     /// assert_eq!(point.to_index(), 0);
     /// ```
-    pub fn to_index(&self) -> u8 {
+    pub const fn to_index(&self) -> u8 {
         ((self.y * Grid::height() as i8) + self.x) as u8
     }
 }
 
 /// Respond to events on the Launchpad Pro surface and control the LEDs.
 pub mod surface {
-    use crate::hal::Point;
-    use crate::hal::Rgb;
+    use crate::hal::{Blue, Green, Point, Red, Rgb};
 
     /// Set the colour of an LED on the grid.
     ///
@@ -177,14 +222,14 @@ pub mod surface {
     /// ```
     ///
     /// use launchpad_pro_rs::hal::surface::set_led;
-    /// use launchpad_pro_rs::hal::{Point, Rgb};
+    /// use launchpad_pro_rs::hal::{Point, Rgb, Red, Green, Blue};
     ///
-    /// set_led(Point::new(5, 5), Rgb::new(255, 127, 0));
+    /// set_led(Point::new(5, 5), Rgb::new(Red::new(255), Green::new(127), Blue::new(0)));
     /// ```
-    pub fn set_led(point: Point, rgb: Rgb) {
+    pub fn set_led(point: Point, Rgb(Red(red), Green(green), Blue(blue)): Rgb) {
         if point.to_index() < super::Grid::size() {
             unsafe {
-                super::hal_plot_led(0, point.to_index(), rgb.0, rgb.1, rgb.2);
+                super::hal_plot_led(0, point.to_index(), red, green, blue);
             };
         }
     }
@@ -207,7 +252,7 @@ pub mod surface {
             unsafe {
                 super::hal_read_led(0, point.to_index(), &mut red, &mut green, &mut blue);
             };
-            return Some(Rgb(red, green, blue));
+            return Some(Rgb(Red(red), Green(green), Blue(blue)));
         }
         None
     }
@@ -244,39 +289,33 @@ pub mod surface {
 
     /// A wrapper around the raw ADC pointer to allow reading values from the pads.
     pub struct Pads {
-        adc: *const u16
+        adc: *const u16,
     }
 
     unsafe impl Sync for Pads {}
-    unsafe impl Send for Pads {}
 
     impl Pads {
         /// Construct a new Pads instance from a raw ADC pointer.
-        pub fn new(adc: *const u16) -> Self {
+        pub const fn new(adc: *const u16) -> Self {
             Self { adc }
         }
 
         /// Read a 12-bit value from a pad at a given point on the grid. If there isn't a pad at the
         /// point provided then this function will return None.
         pub fn read(&self, pos: Point) -> Option<u16> {
-            if let Some(offset) = Self::point_to_offset(pos) {
-                Some(unsafe { *self.adc.offset(offset as isize) })
-            } else {
-                None
-            }
+            Self::point_to_offset(pos).map(|offset| unsafe { *self.adc.add(offset) })
         }
 
         /// For technical reasons the offsets from the ADC pointer use a slightly odd scheme.
         /// This function converts points in the grid to offsets into this ADC pointer corresponding
         /// to that point. If there isn't a pad at the point provided then this function will return
         /// None.
-        fn point_to_offset(pos: Point) -> Option<usize> {
+        const fn point_to_offset(pos: Point) -> Option<usize> {
             if pos.y >= 1 && pos.y <= 4 && pos.x >= 1 && pos.x <= 8 {
                 let y_offset = (pos.y - 1) * 16;
                 let x_offset = (pos.x - 1) * 2;
                 Some((x_offset + y_offset) as usize)
-            }
-            else if pos.y >= 5 && pos.y <= 8 && pos.x >= 1 && pos.x <= 8 {
+            } else if pos.y >= 5 && pos.y <= 8 && pos.x >= 1 && pos.x <= 8 {
                 let y_offset = (pos.y - 5) * 16;
                 let x_offset = (pos.x - 1) * 2;
                 Some((x_offset + y_offset + 1) as usize)
@@ -317,7 +356,7 @@ pub mod surface {
 
     #[test]
     fn read_adc_value() {
-        let mut values = [0 as u16; 64];
+        let mut values = [0u16; 64];
         let pads = Pads::new(values.as_ptr());
 
         assert_eq!(pads.read(Point::new(0, 0)), None);
@@ -347,8 +386,8 @@ pub mod midi {
 
     impl Message {
         /// Construct a new MIDI message.
-        pub fn new(status: u8, data: (u8, u8)) -> Self {
-            Self {status, data}
+        pub const fn new(status: u8, data: (u8, u8)) -> Self {
+            Self { status, data }
         }
     }
 
@@ -401,161 +440,225 @@ pub mod midi {
     }
 }
 
-/// The EventListener trait can be implemented to receive events from the Launchpad Pro hardware.
-pub trait LaunchpadApp: Sync {
+/// The LaunchpadApp trait can be implemented to receive events from the Launchpad Pro hardware.
+pub trait LaunchpadApp {
     /// Called on startup.
-    fn init_event(&self, _pads: surface::Pads) {}
-    /// A 1 kHz (1 millisecond) timer.
-    fn timer_event(&self) {}
+    fn init_event(&mut self, _pads: surface::Pads) {}
+    /// A timer. The interval is specified in milliseconds when using the `launchpad_app` macro.
+    fn timer_event(&mut self) {}
     /// Called when a MIDI message is received from USB or DIN.
-    fn midi_event(&self, _port: midi::Port, _midi_event: midi::Message) {}
+    fn midi_event(&mut self, _port: midi::Port, _midi_event: midi::Message) {}
     /// Called when a SysEx message is received from USB or DIN.
-    fn sysex_event(&self, _port: midi::Port, _data: &[u8]) {}
+    fn sysex_event(&mut self, _port: midi::Port, _data: &[u8]) {}
     /// Called when a MIDI DIN cable is connected or disconnected.
-    fn cable_event(&self, _cable_event: midi::CableEvent) {}
+    fn cable_event(&mut self, _cable_event: midi::CableEvent) {}
     /// Called when the user presses or releases a button or pad on the surface.
-    fn button_event(&self, _button_event: surface::ButtonEvent) {}
+    fn button_event(&mut self, _button_event: surface::ButtonEvent) {}
     /// Called when an aftertouch (pad pressure) event is reported by the low level firmware.
-    fn aftertouch_event(&self, _aftertouch_event: surface::AftertouchEvent) {}
+    fn aftertouch_event(&mut self, _aftertouch_event: surface::AftertouchEvent) {}
 }
 
-/// Register an instance of some type that implements the `EventListener` trait to receive event
-/// notifications from the Launchpad Pro hardware.
+/// Register a type that implements the [`LaunchpadApp`] trait to receive event
+/// notifications from the Launchpad Pro hardware. The type must implement the [`Default`] trait,
+/// as it will be instantiated when the hardware is initialised.
 ///
 /// This macro should only be called once.
 ///
 /// # Example
 ///
 /// ```
-/// use launchpad_pro_rs::hal::{LaunchpadApp, Point, Rgb};
-/// use launchpad_pro_rs::hal::surface::{Pads, set_led, AftertouchEvent, ButtonEvent};
-/// use launchpad_pro_rs::launchpad_app;
-/// use launchpad_pro_rs::hal::midi::{Message, Port, CableEvent};
+/// use launchpad_pro_rs::{
+///     launchpad_app,
+///     hal::{midi::{Message, Port, CableEvent},
+///     surface::{Pads, set_led, AftertouchEvent, ButtonEvent},
+///     LaunchpadApp, Point, Rgb, Red, Green, Blue}
+/// };
 ///
-/// struct App; // define our app type
+/// #[derive(Default)]
+/// pub struct App; // define our app type
 ///
-/// static APP: App = App; // create a static instance of our app
-///
-/// impl LaunchpadApp for App { // implement the EventListener trait for our app
-///     fn init_event(&self, _: Pads) {
+/// impl LaunchpadApp for App { // implement the LaunchpadApp trait for our app
+///     fn init_event(&mut self, _: Pads) {
 ///         // when the Launchpad is initialised we will set a white LED at the center of the grid
-///         set_led(Point::new(5, 5), Rgb::new(255, 255, 255));
+///         set_led(Point::new(5, 5), Rgb::new(Red::new(255), Green::new(255), Blue::new(255)));
 ///     }
 /// }
 ///
-/// launchpad_app!(APP); // register it as the global event listener
+/// // Register our app with the hardware.
+/// // The timer interval is specified in milliseconds, and determines how often the `timer_event`
+/// // method will be called.
+/// launchpad_app!(App => 100 ms);
 /// ```
-
-static mut EVENT_LISTENER: Option<&dyn LaunchpadApp> = None;
-
-pub fn set_listener(listener: &'static dyn LaunchpadApp) {
-    unsafe {
-        EVENT_LISTENER.replace(listener);
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
-        listener.button_event(surface::ButtonEvent {
-            button: if event == 1 {
-                surface::Button::Setup
-            } else {
-                surface::Button::Pad(Point::from_index(index))
-            },
-            event: if value == 0 {
-                surface::Event::Release
-            } else {
-                surface::Event::Press(value)
-            },
-        });
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn app_midi_event(port: u8, status: u8, data1: u8, data2: u8) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
-        let port = match port {
-            0 => Some(midi::Port::Standalone),
-            1 => Some(midi::Port::USB),
-            2 => Some(midi::Port::DIN),
-            _ => None,
-        };
-
-        if let Some(port) = port {
-            listener.midi_event(port, midi::Message {
-                status,
-                data: (data1, data2),
-            });
-        }
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
-        let port = match port {
-            0 => Some(midi::Port::Standalone),
-            1 => Some(midi::Port::USB),
-            2 => Some(midi::Port::DIN),
-            _ => None,
-        };
-
-        if let Some(port) = port {
-            let slice = unsafe { core::slice::from_raw_parts(data, count as usize) };
-            listener.sysex_event(port, slice);
-        }
-    }
-
-}
-
-#[no_mangle]
-pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
-        listener.aftertouch_event(surface::AftertouchEvent {
-            point: Point::from_index(index),
-            value,
-        });
-    }
-}
-
-#[no_mangle]
-extern "C" fn app_cable_event(cable_type: u8, value: u8) {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
-        let cable_type = match cable_type {
-            0 => Some(midi::Cable::MidiIn),
-            1 => Some(midi::Cable::MidiOut),
-            _ => None,
-        };
-
-        if let Some(cable_type) = cable_type {
-            listener.cable_event(match value {
-                0 => midi::CableEvent::Disconnect(cable_type),
-                _ => midi::CableEvent::Connect(cable_type),
-            });
-        }
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn app_timer_event() {
-    if let Some(listener) = unsafe { EVENT_LISTENER } {
-        listener.timer_event();
-    }
-}
-
 #[macro_export]
 macro_rules! launchpad_app {
-    ($app:expr) => {
-        #[no_mangle]
-        pub static __LAUNCHPAD_APP: &dyn $crate::hal::LaunchpadApp = &$app;
+    ($t:ty => $timer_interval:literal ms) => {
+        static __LAUNCHPAD_APP: $crate::hal::Mutex<Option<$t>> = $crate::hal::Mutex::new(None);
 
         #[no_mangle]
         pub extern "C" fn app_init(adc: *const u16) {
-            $crate::hal::set_listener(__LAUNCHPAD_APP);
-            __LAUNCHPAD_APP.init_event($crate::hal::surface::Pads::new(adc));
+            let mut app = __LAUNCHPAD_APP.lock();
+            if app.is_none() {
+                let app = app.insert(<$t>::default());
+                $crate::hal::app_init_event(app, adc);
+            }
         }
+
+        #[no_mangle]
+        pub extern "C" fn app_surface_event(event: u8, index: u8, value: u8) {
+            let mut app = __LAUNCHPAD_APP.lock();
+            if let Some(app) = app.as_mut() {
+                $crate::hal::app_surface_event(app, event, index, value);
+            }
+        }
+
+        #[no_mangle]
+        pub extern "C" fn app_midi_event(port: u8, status: u8, data1: u8, data2: u8) {
+            let mut app = __LAUNCHPAD_APP.lock();
+            if let Some(app) = app.as_mut() {
+                $crate::hal::app_midi_event(app, port, status, data1, data2);
+            }
+        }
+
+        #[no_mangle]
+        pub extern "C" fn app_sysex_event(port: u8, data: *mut u8, count: u16) {
+            let mut app = __LAUNCHPAD_APP.lock();
+            if let Some(app) = app.as_mut() {
+                $crate::hal::app_sysex_event(app, port, data, count);
+            }
+        }
+
+        #[no_mangle]
+        pub extern "C" fn app_aftertouch_event(index: u8, value: u8) {
+            let mut app = __LAUNCHPAD_APP.lock();
+            if let Some(app) = app.as_mut() {
+                $crate::hal::app_aftertouch_event(&mut *app, index, value);
+            }
+        }
+
+        #[no_mangle]
+        extern "C" fn app_cable_event(cable_type: u8, value: u8) {
+            let mut app = __LAUNCHPAD_APP.lock();
+            if let Some(app) = app.as_mut() {
+                $crate::hal::app_cable_event(app, cable_type, value);
+            }
+        }
+
+        #[no_mangle]
+        pub extern "C" fn app_timer_event() {
+            static mut ONE_MS_TICKS: i32 = 0;
+
+            unsafe {
+                if ONE_MS_TICKS == $timer_interval {
+                    ONE_MS_TICKS = 0;
+                } else {
+                    ONE_MS_TICKS += 1;
+                    return;
+                }
+            }
+
+            // If the timer is running too fast we can get too much contention on the lock, which
+            // grinds everything to a halt, so we only run the timer event if the lock is free.
+            if let Some(mut app) = __LAUNCHPAD_APP.try_lock() {
+                if let Some(app) = app.as_mut() {
+                    $crate::hal::app_timer_event(app);
+                }
+            }
+        }
+
+        #[cfg(target_arch = "arm")]
+        #[panic_handler]
+        fn panic(_info: &core::panic::PanicInfo) -> ! {
+            loop {}
+        }
+
+        #[cfg(not(target_arch = "arm"))]
+        fn main() {}
     };
+}
+
+#[doc(hidden)]
+pub fn app_init_event(app: &mut dyn LaunchpadApp, adc: *const u16) {
+    app.init_event(surface::Pads::new(adc));
+}
+
+#[doc(hidden)]
+pub fn app_surface_event(app: &mut dyn LaunchpadApp, event: u8, index: u8, value: u8) {
+    app.button_event(surface::ButtonEvent {
+        button: if event == 1 {
+            surface::Button::Setup
+        } else {
+            surface::Button::Pad(Point::from_index(index))
+        },
+        event: if value == 0 {
+            surface::Event::Release
+        } else {
+            surface::Event::Press(value)
+        },
+    });
+}
+
+#[doc(hidden)]
+pub fn app_midi_event(app: &mut dyn LaunchpadApp, port: u8, status: u8, data1: u8, data2: u8) {
+    let port = match port {
+        0 => Some(midi::Port::Standalone),
+        1 => Some(midi::Port::USB),
+        2 => Some(midi::Port::DIN),
+        _ => None,
+    };
+
+    if let Some(port) = port {
+        app.midi_event(
+            port,
+            midi::Message {
+                status,
+                data: (data1, data2),
+            },
+        );
+    }
+}
+
+#[doc(hidden)]
+pub fn app_sysex_event(app: &mut dyn LaunchpadApp, port: u8, data: *mut u8, count: u16) {
+    let port = match port {
+        0 => Some(midi::Port::Standalone),
+        1 => Some(midi::Port::USB),
+        2 => Some(midi::Port::DIN),
+        _ => None,
+    };
+
+    if let Some(port) = port {
+        let slice = unsafe { core::slice::from_raw_parts(data, count as usize) };
+        app.sysex_event(port, slice);
+    }
+}
+
+#[doc(hidden)]
+pub fn app_aftertouch_event(app: &mut dyn LaunchpadApp, index: u8, value: u8) {
+    app.aftertouch_event(surface::AftertouchEvent {
+        point: Point::from_index(index),
+        value,
+    });
+}
+
+#[doc(hidden)]
+pub fn app_cable_event(app: &mut dyn LaunchpadApp, cable_type: u8, value: u8) {
+    let cable_type = match cable_type {
+        0 => Some(midi::Cable::MidiIn),
+        1 => Some(midi::Cable::MidiOut),
+        _ => None,
+    };
+
+    if let Some(cable_type) = cable_type {
+        app.cable_event(match value {
+            0 => midi::CableEvent::Disconnect(cable_type),
+            _ => midi::CableEvent::Connect(cable_type),
+        });
+    }
+}
+
+#[doc(hidden)]
+pub fn app_timer_event(app: &mut dyn LaunchpadApp) {
+    app.timer_event();
 }
 
 #[cfg(test)]
@@ -615,9 +718,10 @@ mod tests {
 
     #[test]
     fn colors_get_converted_to_18_bit() {
-        let color = Rgb::new(255, 127, 63);
-        assert_eq!(color.0, 63);
-        assert_eq!(color.1, 31);
-        assert_eq!(color.2, 15);
+        let Rgb(Red(red), Green(green), Blue(blue)) =
+            Rgb::new(Red::new(255), Green::new(127), Blue::new(63));
+        assert_eq!(red, 63);
+        assert_eq!(green, 31);
+        assert_eq!(blue, 15);
     }
 }
