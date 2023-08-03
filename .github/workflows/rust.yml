@@ -1,0 +1,34 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+    - name: Install ARM target
+      run: rustup target add thumbv7m-none-eabi
+    - name: Install binutils
+      run: cargo install cargo-binutils
+    - name: Install LLVM tools
+      run: rustup component add llvm-tools-preview
+    - name: Install cargo-make
+      run: cargo install cargo-make
+    - name: Install ARM toolchain
+      run: brew install armmbed/formulae/arm-none-eabi-gcc
+    - name: Build firmware image
+      run: cargo sysex --bin main

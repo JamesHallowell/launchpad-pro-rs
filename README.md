@@ -1,5 +1,5 @@
 # launchpad-pro-rs
-[![Build Status](https://travis-ci.org/JamesHallowell/launchpad-pro-rs.svg?branch=master)](https://travis-ci.org/JamesHallowell/launchpad-pro-rs)
+[![Rust](https://github.com/JamesHallowell/launchpad-pro-rs/actions/workflows/rust.yml/badge.svg)](https://github.com/JamesHallowell/launchpad-pro-rs/actions/workflows/rust.yml)
 
 A fork of [dvhdr's launchpad-pro](https://github.com/dvhdr/launchpad-pro) project to enable writing open source firmware for the Launchpad Pro in [Rust](https://www.rust-lang.org/).
 
